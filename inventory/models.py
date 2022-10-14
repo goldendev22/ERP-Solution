@@ -117,4 +117,3 @@ class PPE(models.Model):
         db_table = "tb_ppe_inventory"
         ordering = ['-ppe_desc']
 
-

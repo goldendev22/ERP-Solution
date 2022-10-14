@@ -184,12 +184,9 @@
                         <div class="col-md-8">
                             <select class="form-control uom-select" id="uom" name="uom" required>
                                 <option value="">Select UOM</option>
-                                <option value="Nos">Nos</option>
-                                <option value="Pcs">Pcs</option>
-                                <option value="Lgth">Lgth</option>
-                                <option value="Box">Box</option>
-                                <option value="Lot">Lot</option>
-                                <option value="Points">Points</option>
+                                {% for uom in uoms %}
+                                    <option value="{{uom.id}}">{{uom.name}}</option>
+                                {% endfor %}
                             </select>
                         </div>
                     </div>

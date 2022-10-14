@@ -2,6 +2,8 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.generic.list import ListView
+
+from accounts.models import Uom
 from inventory.models import Material, Asset, PPE, Hardware, Stationary
 from sales.decorater import ajax_login_required
 from django.http import JsonResponse, HttpResponse
@@ -14,6 +16,7 @@ import pandas as pd
 import os
 import pytz
 import datetime
+
 
 # Create your views here.
 @method_decorator(login_required, name='dispatch')
@@ -29,7 +32,9 @@ class InventoryMaterialView(ListView):
         context['material_nums'] = Material.objects.order_by('material_code').values('material_code').distinct()
         context['brands'] = Material.objects.order_by('brand').values('brand').distinct()
         context['suppliers'] = Company.objects.filter(associate="Supplier")
+        context['uoms'] = Uom.objects.all()
         return context
+
 
 @ajax_login_required
 def materialdelete(request):
@@ -40,6 +45,7 @@ def materialdelete(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 def ajax_export_materials(request):
     resource = MaterialResource()
     dataset = resource.export()
@@ -47,27 +53,28 @@ def ajax_export_materials(request):
     response['Content-Disposition'] = 'attachment; filename="materials.csv"'
     return response
 
+
 def ajax_import_materials(request):
-    
     if request.method == 'POST':
-        org_column_names = ["material_code", "product_desc", "supplier_name",  "part_number", "color", "brand", "location","remark", "uom", "replenish_qty", "restock_qty", "stock_qty"]
-        
+        org_column_names = ["material_code", "product_desc", "supplier_name", "part_number", "color", "brand",
+                            "location", "remark", "uom", "replenish_qty", "restock_qty", "stock_qty"]
+
         csv_file = request.FILES['file']
         contents = csv_file.read().decode('UTF-8')
         path = "temp.csv"
-        f = open(path,'w')
+        f = open(path, 'w')
         f.write(contents)
         f.close()
 
-        df = pd.read_csv(path)    
+        df = pd.read_csv(path)
         df.fillna("", inplace=True)
         column_names = list(df)
 
         if len(column_names) == 1:
-            df = pd.read_csv(path, delimiter = ';', decimal = ',', encoding = 'utf-8')    
+            df = pd.read_csv(path, delimiter=';', decimal=',', encoding='utf-8')
             df.fillna("", inplace=True)
             column_names = list(df)
-        
+
         dif_len = len(list(set(org_column_names) - set(column_names)))
 
         if dif_len == 0:
@@ -90,11 +97,11 @@ def ajax_import_materials(request):
                             remark=str(row["remark"]),
                             part_number=str(row["part_number"]),
                             color=str(row["color"]),
-                            brand=str(row["brand"]), 
-                            location=str(row["location"]), 
-                            uom=str(row["uom"]), 
-                            replenish_qty=replenish_qty, 
-                            restock_qty=row["restock_qty"], 
+                            brand=str(row["brand"]),
+                            location=str(row["location"]),
+                            uom=str(row["uom"]),
+                            replenish_qty=replenish_qty,
+                            restock_qty=row["restock_qty"],
                             stock_qty=row["stock_qty"],
                         )
                         material.save()
@@ -107,50 +114,52 @@ def ajax_import_materials(request):
                         material = Material.objects.filter(material_code=row["material_code"])[0]
                         material.material_code = row["material_code"]
                         material.product_desc = row["product_desc"]
-                        material.supplier_name=str(row["supplier_name"])
-                        material.remark=str(row["remark"])
-                        material.part_number=str(row["part_number"])
-                        material.color=str(row["color"])
-                        material.brand=str(row["brand"])
-                        material.location=str(row["location"])
-                        material.uom=str(row["uom"])
-                        material.replenish_qty=row["replenish_qty"]
-                        material.restock_qty=replenish_qty
-                        material.stock_qty=row["stock_qty"]
+                        material.supplier_name = str(row["supplier_name"])
+                        material.remark = str(row["remark"])
+                        material.part_number = str(row["part_number"])
+                        material.color = str(row["color"])
+                        material.brand = str(row["brand"])
+                        material.location = str(row["location"])
+                        material.uom = str(row["uom"])
+                        material.replenish_qty = row["replenish_qty"]
+                        material.restock_qty = replenish_qty
+                        material.stock_qty = row["stock_qty"]
                         material.save()
                         exist_record += 1
                     except Exception as e:
                         print(e)
                         failed_record += 1
             os.remove(path)
-            return JsonResponse({'status':'true','error_code':'0', 'total': record_count, 'success': success_record, 'failed': failed_record, 'exist': exist_record})
+            return JsonResponse({'status': 'true', 'error_code': '0', 'total': record_count, 'success': success_record,
+                                 'failed': failed_record, 'exist': exist_record})
         else:
             os.remove(path)
             # column count is not equals
-            return JsonResponse({'status':'false','error_code':'1'})
+            return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
 
+
 def ajax_import_assets(request):
-    
     if request.method == 'POST':
-        org_column_names = ["asset_code","supplier_name", "asset_desc",  "category", "part_number", "brand", "status", "type", "remark"]
-        
+        org_column_names = ["asset_code", "supplier_name", "asset_desc", "category", "part_number", "brand", "status",
+                            "type", "remark"]
+
         csv_file = request.FILES['file']
         contents = csv_file.read().decode('UTF-8')
         path = "temp.csv"
-        f = open(path,'w')
+        f = open(path, 'w')
         f.write(contents)
         f.close()
 
-        df = pd.read_csv(path)    
+        df = pd.read_csv(path)
         df.fillna("", inplace=True)
         column_names = list(df)
 
         if len(column_names) == 1:
-            df = pd.read_csv(path, delimiter = ';', decimal = ',', encoding = 'utf-8')    
+            df = pd.read_csv(path, delimiter=';', decimal=',', encoding='utf-8')
             df.fillna("", inplace=True)
             column_names = list(df)
-        
+
         dif_len = len(list(set(org_column_names) - set(column_names)))
         if dif_len == 0:
             record_count = len(df.index)
@@ -168,8 +177,8 @@ def ajax_import_assets(request):
                             category=str(row["category"]),
                             part_number=str(row["part_number"]),
                             type=str(row["type"]),
-                            brand=str(row["brand"]), 
-                            status=str(row["status"]), 
+                            brand=str(row["brand"]),
+                            status=str(row["status"]),
                             remark=str(row["remark"]),
                         )
                         asset.save()
@@ -182,24 +191,25 @@ def ajax_import_assets(request):
                         asset = Asset.objects.filter(asset_code=row["asset_code"])[0]
                         asset.asset_code = row["asset_code"]
                         asset.asset_desc = row["asset_desc"]
-                        asset.supplier_name=str(row["supplier_name"])
-                        asset.category=str(row["category"])
-                        asset.part_number=str(row["part_number"])
-                        asset.type=str(row["type"])
-                        asset.brand=str(row["brand"])
-                        asset.status=str(row["status"])
-                        asset.remark=str(row["remark"])
+                        asset.supplier_name = str(row["supplier_name"])
+                        asset.category = str(row["category"])
+                        asset.part_number = str(row["part_number"])
+                        asset.type = str(row["type"])
+                        asset.brand = str(row["brand"])
+                        asset.status = str(row["status"])
+                        asset.remark = str(row["remark"])
                         asset.save()
                         exist_record += 1
                     except Exception as e:
                         print(e)
                         failed_record += 1
             os.remove(path)
-            return JsonResponse({'status':'true','error_code':'0', 'total': record_count, 'success': success_record, 'failed': failed_record, 'exist': exist_record})
+            return JsonResponse({'status': 'true', 'error_code': '0', 'total': record_count, 'success': success_record,
+                                 'failed': failed_record, 'exist': exist_record})
         else:
             os.remove(path)
             # column count is not equals
-            return JsonResponse({'status':'false','error_code':'1'})
+            return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
 
 
@@ -210,12 +220,14 @@ def ajax_export_hardwares(request):
     response['Content-Disposition'] = 'attachment; filename="hardwares.csv"'
     return response
 
+
 def ajax_export_ppes(request):
     resource = PPEResource()
     dataset = resource.export()
     response = HttpResponse(dataset.csv, content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="PPE.csv"'
     return response
+
 
 def ajax_export_stationary(request):
     resource = StationaryResource()
@@ -224,12 +236,14 @@ def ajax_export_stationary(request):
     response['Content-Disposition'] = 'attachment; filename="stationarys.csv"'
     return response
 
+
 def ajax_export_assets(request):
     resource = AssetResource()
     dataset = resource.export()
     response = HttpResponse(dataset.csv, content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="assets.csv"'
     return response
+
 
 @ajax_login_required
 def materialinventoryadd(request):
@@ -238,7 +252,7 @@ def materialinventoryadd(request):
         product_desc = request.POST.get('product_desc')
         part_number = request.POST.get('part_number')
         color = request.POST.get('color')
-        uom = request.POST.get('uom')
+        uom_id = request.POST.get('uom')
         replenish_qty = request.POST.get('replenish_qty')
         restock_qty = request.POST.get('restock_qty')
         stock_qty = request.POST.get('stock_qty')
@@ -254,7 +268,7 @@ def materialinventoryadd(request):
                     product_desc=product_desc,
                     part_number=part_number,
                     color=color,
-                    uom=uom,
+                    uom=Uom.objects.get(id=int(uom_id)),
                     location=location,
                     remark=remark,
                     replenish_qty=replenish_qty,
@@ -269,7 +283,7 @@ def materialinventoryadd(request):
                     "status": "Success",
                     "messages": "Material Inventory information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -277,18 +291,18 @@ def materialinventoryadd(request):
         else:
             try:
                 materialinventory = Material.objects.get(id=materialid)
-                materialinventory.material_code=material_code
+                materialinventory.material_code = material_code
                 materialinventory.product_desc = product_desc
                 materialinventory.part_number = part_number
                 materialinventory.color = color
-                materialinventory.uom = uom
+                materialinventory.uom = Uom.objects.get(id=uom_id)
                 materialinventory.remark = remark
                 materialinventory.location = location
                 materialinventory.supplier_name = supplier
-                materialinventory.replenish_qty=replenish_qty
+                materialinventory.replenish_qty = replenish_qty
                 materialinventory.restock_qty = restock_qty
                 materialinventory.stock_qty = stock_qty
-                materialinventory.brand=brand
+                materialinventory.brand = brand
                 if request.FILES.get('picture') is not None:
                     materialinventory.photo = request.FILES.get('picture')
                 else:
@@ -300,11 +314,13 @@ def materialinventoryadd(request):
                     "messages": "Material Inventory information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
+
 @ajax_login_required
 def getMaterial(request):
     if request.method == "POST":
@@ -318,7 +334,7 @@ def getMaterial(request):
                 'stock_qty': material.stock_qty,
                 'replenish_qty': material.replenish_qty,
                 'restock_qty': material.restock_qty,
-                'uom': material.uom,
+                'uom': material.uom.id,
                 'location': material.location,
                 'remark': material.remark,
                 'color': material.color,
@@ -335,7 +351,7 @@ def getMaterial(request):
                 'stock_qty': material.stock_qty,
                 'replenish_qty': material.replenish_qty,
                 'restock_qty': material.restock_qty,
-                'uom': material.uom,
+                'uom': material.uom.id,
                 'location': material.location,
                 'remark': material.remark,
                 'color': material.color,
@@ -346,6 +362,7 @@ def getMaterial(request):
             }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def ajax_inventory(request):
     if request.method == "POST":
@@ -353,23 +370,25 @@ def ajax_inventory(request):
 
         return render(request, 'inventorys/ajax-inventory.html', {'materials': materials})
 
+
 @ajax_login_required
 def check_material_code(request):
     if request.method == "POST":
         if Material.objects.all().exists():
-            material= Material.objects.all().order_by('-material_code')[0]
+            material = Material.objects.all().order_by('-material_code')[0]
             data = {
                 "status": "exist",
                 "material": material.material_code
             }
-        
+
             return JsonResponse(data)
         else:
             data = {
                 "status": "no exist"
             }
-        
+
             return JsonResponse(data)
+
 
 @ajax_login_required
 def ajax_filter_inventory(request):
@@ -382,9 +401,10 @@ def ajax_filter_inventory(request):
 
         elif search_location != "" and search_num != "" and search_brand == "":
             materials = Material.objects.filter(location__iexact=search_location, material_code__iexact=search_num)
-        
+
         elif search_location != "" and search_num != "" and search_brand != "":
-            materials = Material.objects.filter(location__iexact=search_location, material_code__iexact=search_num, brand__iexact=search_brand)
+            materials = Material.objects.filter(location__iexact=search_location, material_code__iexact=search_num,
+                                                brand__iexact=search_brand)
 
         elif search_location == "" and search_num != "" and search_brand == "":
             materials = Material.objects.filter(material_code__iexact=search_num)
@@ -396,7 +416,7 @@ def ajax_filter_inventory(request):
             materials = Material.objects.filter(brand__iexact=search_brand)
 
         elif search_location != "" and search_num == "" and search_brand != "":
-            materials = Material.objects.filter(location__iexact=search_location,brand__iexact=search_brand)
+            materials = Material.objects.filter(location__iexact=search_location, brand__iexact=search_brand)
 
         return render(request, 'inventorys/ajax-inventory.html', {'materials': materials})
 
@@ -416,6 +436,7 @@ class InventoryAssetView(ListView):
         context['suppliers'] = Company.objects.filter(associate="Supplier")
         return context
 
+
 @ajax_login_required
 def assetdelete(request):
     if request.method == "POST":
@@ -424,6 +445,7 @@ def assetdelete(request):
         material.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def assetinventoryadd(request):
@@ -457,7 +479,7 @@ def assetinventoryadd(request):
                     "status": "Success",
                     "messages": "Asset Inventory information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -465,14 +487,14 @@ def assetinventoryadd(request):
         else:
             try:
                 assetinventory = Asset.objects.get(id=assetid)
-                assetinventory.asset_code=asset_code
+                assetinventory.asset_code = asset_code
                 assetinventory.asset_desc = asset_desc
                 assetinventory.part_number = part_number
-                assetinventory.warranty_expiry_date=warranty_expiry_date
+                assetinventory.warranty_expiry_date = warranty_expiry_date
                 assetinventory.remark = remark
                 assetinventory.type = type
                 assetinventory.supplier_name = supplier
-                assetinventory.brand=brand
+                assetinventory.brand = brand
                 if request.FILES.get('picture') is not None:
                     assetinventory.photo = request.FILES.get('picture')
                 else:
@@ -484,11 +506,13 @@ def assetinventoryadd(request):
                     "messages": "Asset Inventory information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
+
 @ajax_login_required
 def getAsset(request):
     if request.method == "POST":
@@ -522,12 +546,14 @@ def getAsset(request):
             }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def ajax_asset(request):
     if request.method == "POST":
         assets = Asset.objects.all()
 
         return render(request, 'inventorys/ajax-asset.html', {'assets': assets})
+
 
 @ajax_login_required
 def ajax_filter_asset(request):
@@ -540,9 +566,10 @@ def ajax_filter_asset(request):
 
         elif search_type != "" and search_no != "" and search_brand == "":
             assets = Asset.objects.filter(type__iexact=search_type, asset_code__iexact=search_no)
-        
+
         elif search_type != "" and search_no != "" and search_brand != "":
-            assets = Asset.objects.filter(type__iexact=search_type, asset_code__iexact=search_no, brand__iexact=search_brand)
+            assets = Asset.objects.filter(type__iexact=search_type, asset_code__iexact=search_no,
+                                          brand__iexact=search_brand)
 
         elif search_type == "" and search_no != "" and search_brand == "":
             assets = Asset.objects.filter(asset_code__iexact=search_no)
@@ -554,12 +581,12 @@ def ajax_filter_asset(request):
             assets = Asset.objects.filter(brand__iexact=search_brand)
 
         elif search_type != "" and search_no == "" and search_brand != "":
-            assets = Asset.objects.filter(type__iexact=search_type,brand__iexact=search_brand)
+            assets = Asset.objects.filter(type__iexact=search_type, brand__iexact=search_brand)
 
         return render(request, 'inventorys/ajax-asset.html', {'assets': assets})
 
 
-#PPE part
+# PPE part
 @method_decorator(login_required, name='dispatch')
 class InventoryPPEView(ListView):
     model = PPE
@@ -573,7 +600,9 @@ class InventoryPPEView(ListView):
         context['ppe_nums'] = PPE.objects.order_by('ppe_code').values('ppe_code').distinct()
         context['brands'] = PPE.objects.order_by('brand').values('brand').distinct()
         context['suppliers'] = Company.objects.filter(associate="Supplier")
+        context['uoms'] = Uom.objects.all()
         return context
+
 
 @ajax_login_required
 def ppedelete(request):
@@ -584,27 +613,28 @@ def ppedelete(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 def ajax_import_ppe(request):
-    
     if request.method == 'POST':
-        org_column_names = ["ppe_code", "ppe_desc", "supplier_name",  "part_number", "variant", "brand", "status", "uom", "replenish_qty", "restock_qty", "stock_qty"]
-        
+        org_column_names = ["ppe_code", "ppe_desc", "supplier_name", "part_number", "variant", "brand", "status", "uom",
+                            "replenish_qty", "restock_qty", "stock_qty"]
+
         csv_file = request.FILES['file']
         contents = csv_file.read().decode('UTF-8')
         path = "temp.csv"
-        f = open(path,'w')
+        f = open(path, 'w')
         f.write(contents)
         f.close()
 
-        df = pd.read_csv(path)    
+        df = pd.read_csv(path)
         df.fillna("", inplace=True)
         column_names = list(df)
 
         if len(column_names) == 1:
-            df = pd.read_csv(path, delimiter = ';', decimal = ',', encoding = 'utf-8')    
+            df = pd.read_csv(path, delimiter=';', decimal=',', encoding='utf-8')
             df.fillna("", inplace=True)
             column_names = list(df)
-        
+
         dif_len = len(list(set(org_column_names) - set(column_names)))
 
         if dif_len == 0:
@@ -623,10 +653,10 @@ def ajax_import_ppe(request):
                             variant=str(row["variant"]),
                             part_number=str(row["part_number"]),
                             status=str(row["status"]),
-                            brand=str(row["brand"]), 
-                            uom=str(row["uom"]), 
-                            replenish_qty=row["replenish_qty"], 
-                            restock_qty=row["restock_qty"], 
+                            brand=str(row["brand"]),
+                            uom=str(row["uom"]),
+                            replenish_qty=row["replenish_qty"],
+                            restock_qty=row["restock_qty"],
                             stock_qty=row["stock_qty"],
                         )
                         ppe.save()
@@ -639,27 +669,29 @@ def ajax_import_ppe(request):
                         ppe = PPE.objects.filter(ppe_code=row["ppe_code"])[0]
                         ppe.ppe_code = row["ppe_code"]
                         ppe.ppe_desc = row["ppe_desc"]
-                        ppe.supplier_name=str(row["supplier_name"])
-                        ppe.status=str(row["status"])
-                        ppe.part_number=str(row["part_number"])
-                        ppe.variant=str(row["variant"])
-                        ppe.brand=str(row["brand"])
-                        ppe.uom=str(row["uom"])
-                        ppe.replenish_qty=row["replenish_qty"]
-                        ppe.restock_qty=row["restock_qty"]
-                        ppe.stock_qty=row["stock_qty"]
+                        ppe.supplier_name = str(row["supplier_name"])
+                        ppe.status = str(row["status"])
+                        ppe.part_number = str(row["part_number"])
+                        ppe.variant = str(row["variant"])
+                        ppe.brand = str(row["brand"])
+                        ppe.uom = str(row["uom"])
+                        ppe.replenish_qty = row["replenish_qty"]
+                        ppe.restock_qty = row["restock_qty"]
+                        ppe.stock_qty = row["stock_qty"]
                         ppe.save()
                         exist_record += 1
                     except Exception as e:
                         print(e)
                         failed_record += 1
             os.remove(path)
-            return JsonResponse({'status':'true','error_code':'0', 'total': record_count, 'success': success_record, 'failed': failed_record, 'exist': exist_record})
+            return JsonResponse({'status': 'true', 'error_code': '0', 'total': record_count, 'success': success_record,
+                                 'failed': failed_record, 'exist': exist_record})
         else:
             os.remove(path)
             # column count is not equals
-            return JsonResponse({'status':'false','error_code':'1'})
+            return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
+
 
 @ajax_login_required
 def ppeinventoryadd(request):
@@ -668,7 +700,7 @@ def ppeinventoryadd(request):
         ppe_desc = request.POST.get('ppe_desc')
         part_number = request.POST.get('part_number')
         variant = request.POST.get('variant')
-        uom = request.POST.get('uom')
+        uom_id = request.POST.get('uom')
         replenish_qty = request.POST.get('replenish_qty')
         restock_qty = request.POST.get('restock_qty')
         stock_qty = request.POST.get('stock_qty')
@@ -682,7 +714,7 @@ def ppeinventoryadd(request):
                     ppe_desc=ppe_desc,
                     part_number=part_number,
                     variant=variant,
-                    uom=uom,
+                    uom=Uom.objects.get(id=uom_id),
                     replenish_qty=replenish_qty,
                     restock_qty=restock_qty,
                     stock_qty=stock_qty,
@@ -695,7 +727,7 @@ def ppeinventoryadd(request):
                     "status": "Success",
                     "messages": "PPE Inventory information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -703,16 +735,16 @@ def ppeinventoryadd(request):
         else:
             try:
                 ppeinventory = PPE.objects.get(id=ppeid)
-                ppeinventory.ppe_code=ppe_code
+                ppeinventory.ppe_code = ppe_code
                 ppeinventory.ppe_desc = ppe_desc
                 ppeinventory.part_number = part_number
                 ppeinventory.variant = variant
-                ppeinventory.uom = uom
+                ppeinventory.uom = Uom.objects.get(id=uom_id)
                 ppeinventory.supplier_name = supplier
-                ppeinventory.replenish_qty=replenish_qty
+                ppeinventory.replenish_qty = replenish_qty
                 ppeinventory.restock_qty = restock_qty
                 ppeinventory.stock_qty = stock_qty
-                ppeinventory.brand=brand
+                ppeinventory.brand = brand
                 if request.FILES.get('picture') is not None:
                     ppeinventory.photo = request.FILES.get('picture')
                 else:
@@ -724,11 +756,13 @@ def ppeinventoryadd(request):
                     "messages": "PPE Inventory information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
+
 @ajax_login_required
 def getPPE(request):
     if request.method == "POST":
@@ -742,7 +776,7 @@ def getPPE(request):
                 'stock_qty': ppe.stock_qty,
                 'replenish_qty': ppe.replenish_qty,
                 'restock_qty': ppe.restock_qty,
-                'uom': ppe.uom,
+                'uom': ppe.uom.id,
                 'variant': ppe.variant,
                 'brand': ppe.brand,
                 'photo': ppe.photo.url,
@@ -757,7 +791,7 @@ def getPPE(request):
                 'stock_qty': ppe.stock_qty,
                 'replenish_qty': ppe.replenish_qty,
                 'restock_qty': ppe.restock_qty,
-                'uom': ppe.uom,
+                'uom': ppe.uom.id,
                 'variant': ppe.variant,
                 'brand': ppe.brand,
                 'supplier': ppe.supplier_name,
@@ -766,12 +800,14 @@ def getPPE(request):
             }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def ajax_ppe(request):
     if request.method == "POST":
         ppes = PPE.objects.all()
 
         return render(request, 'inventorys/ajax-ppe.html', {'ppes': ppes})
+
 
 @ajax_login_required
 def ajax_filter_ppe(request):
@@ -784,9 +820,10 @@ def ajax_filter_ppe(request):
 
         elif search_variant != "" and search_num != "" and search_brand == "":
             ppes = PPE.objects.filter(variant__iexact=search_variant, ppe_code__iexact=search_num)
-        
+
         elif search_variant != "" and search_num != "" and search_brand != "":
-            ppes = PPE.objects.filter(variant__iexact=search_variant, ppe_code__iexact=search_num, brand__iexact=search_brand)
+            ppes = PPE.objects.filter(variant__iexact=search_variant, ppe_code__iexact=search_num,
+                                      brand__iexact=search_brand)
 
         elif search_variant == "" and search_num != "" and search_brand == "":
             ppes = PPE.objects.filter(ppe_code__iexact=search_num)
@@ -798,11 +835,12 @@ def ajax_filter_ppe(request):
             ppes = PPE.objects.filter(brand__iexact=search_brand)
 
         elif search_variant != "" and search_num == "" and search_brand != "":
-            ppes = PPE.objects.filter(variant__iexact=search_variant,brand__iexact=search_brand)
+            ppes = PPE.objects.filter(variant__iexact=search_variant, brand__iexact=search_brand)
 
         return render(request, 'inventorys/ajax-ppe.html', {'ppes': ppes})
 
-#Stationary part
+
+# Stationary part
 @method_decorator(login_required, name='dispatch')
 class InventoryStationaryView(ListView):
     model = Stationary
@@ -811,12 +849,15 @@ class InventoryStationaryView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['stationaries'] = Stationary.objects.all()
-        context['stationary_descs'] = Stationary.objects.order_by('stationary_desc').values('stationary_desc').distinct()
+        context['stationary_descs'] = Stationary.objects.order_by('stationary_desc').values(
+            'stationary_desc').distinct()
         context['colors'] = Stationary.objects.order_by('color').values('color').distinct()
         context['stationary_nums'] = Stationary.objects.order_by('stationary_code').values('stationary_code').distinct()
         context['brands'] = Stationary.objects.order_by('brand').values('brand').distinct()
         context['suppliers'] = Company.objects.filter(associate="Supplier")
+        context['uoms'] = Uom.objects.all()
         return context
+
 
 @ajax_login_required
 def stationarydelete(request):
@@ -826,27 +867,29 @@ def stationarydelete(request):
         stationary.delete()
 
         return JsonResponse({'status': 'ok'})
+
+
 def ajax_import_stationary(request):
-    
     if request.method == 'POST':
-        org_column_names = ["stationary_code", "stationary_desc", "supplier_name",  "part_number", "variant", "brand", "status", "uom", "replenish_qty", "restock_qty", "stock_qty"]
-        
+        org_column_names = ["stationary_code", "stationary_desc", "supplier_name", "part_number", "variant", "brand",
+                            "status", "uom", "replenish_qty", "restock_qty", "stock_qty"]
+
         csv_file = request.FILES['file']
         contents = csv_file.read().decode('UTF-8')
         path = "temp.csv"
-        f = open(path,'w')
+        f = open(path, 'w')
         f.write(contents)
         f.close()
 
-        df = pd.read_csv(path)    
+        df = pd.read_csv(path)
         df.fillna("", inplace=True)
         column_names = list(df)
 
         if len(column_names) == 1:
-            df = pd.read_csv(path, delimiter = ';', decimal = ',', encoding = 'utf-8')    
+            df = pd.read_csv(path, delimiter=';', decimal=',', encoding='utf-8')
             df.fillna("", inplace=True)
             column_names = list(df)
-        
+
         dif_len = len(list(set(org_column_names) - set(column_names)))
 
         if dif_len == 0:
@@ -865,10 +908,10 @@ def ajax_import_stationary(request):
                             variant=str(row["variant"]),
                             part_number=str(row["part_number"]),
                             status=str(row["status"]),
-                            brand=str(row["brand"]), 
-                            uom=str(row["uom"]), 
-                            replenish_qty=row["replenish_qty"], 
-                            restock_qty=row["restock_qty"], 
+                            brand=str(row["brand"]),
+                            uom=str(row["uom"]),
+                            replenish_qty=row["replenish_qty"],
+                            restock_qty=row["restock_qty"],
                             stock_qty=row["stock_qty"],
                         )
                         stationary.save()
@@ -881,27 +924,29 @@ def ajax_import_stationary(request):
                         stationary = Stationary.objects.filter(stationary_code=row["stationary_code"])[0]
                         stationary.stationary_code = row["stationary_code"]
                         stationary.stationary_desc = row["stationary_desc"]
-                        stationary.supplier_name=str(row["supplier_name"])
-                        stationary.status=str(row["status"])
-                        stationary.part_number=str(row["part_number"])
-                        stationary.variant=str(row["variant"])
-                        stationary.brand=str(row["brand"])
-                        stationary.uom=str(row["uom"])
-                        stationary.replenish_qty=row["replenish_qty"]
-                        stationary.restock_qty=row["restock_qty"]
-                        stationary.stock_qty=row["stock_qty"]
+                        stationary.supplier_name = str(row["supplier_name"])
+                        stationary.status = str(row["status"])
+                        stationary.part_number = str(row["part_number"])
+                        stationary.variant = str(row["variant"])
+                        stationary.brand = str(row["brand"])
+                        stationary.uom = str(row["uom"])
+                        stationary.replenish_qty = row["replenish_qty"]
+                        stationary.restock_qty = row["restock_qty"]
+                        stationary.stock_qty = row["stock_qty"]
                         stationary.save()
                         exist_record += 1
                     except Exception as e:
                         print(e)
                         failed_record += 1
             os.remove(path)
-            return JsonResponse({'status':'true','error_code':'0', 'total': record_count, 'success': success_record, 'failed': failed_record, 'exist': exist_record})
+            return JsonResponse({'status': 'true', 'error_code': '0', 'total': record_count, 'success': success_record,
+                                 'failed': failed_record, 'exist': exist_record})
         else:
             os.remove(path)
             # column count is not equals
-            return JsonResponse({'status':'false','error_code':'1'})
+            return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
+
 
 @ajax_login_required
 def stationaryinventoryadd(request):
@@ -910,7 +955,7 @@ def stationaryinventoryadd(request):
         stationary_desc = request.POST.get('stationary_desc')
         part_number = request.POST.get('part_number')
         color = request.POST.get('color')
-        uom = request.POST.get('uom')
+        uom_id = request.POST.get('uom')
         replenish_qty = request.POST.get('replenish_qty')
         restock_qty = request.POST.get('restock_qty')
         stock_qty = request.POST.get('stock_qty')
@@ -924,7 +969,7 @@ def stationaryinventoryadd(request):
                     stationary_desc=stationary_desc,
                     part_number=part_number,
                     color=color,
-                    uom=uom,
+                    uom=Uom.objects.get(id=uom_id),
                     replenish_qty=replenish_qty,
                     restock_qty=restock_qty,
                     stock_qty=stock_qty,
@@ -937,7 +982,7 @@ def stationaryinventoryadd(request):
                     "status": "Success",
                     "messages": "Stationary Inventory information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -945,16 +990,16 @@ def stationaryinventoryadd(request):
         else:
             try:
                 stationaryinventory = Stationary.objects.get(id=stationaryid)
-                stationaryinventory.stationary_code=stationary_code
+                stationaryinventory.stationary_code = stationary_code
                 stationaryinventory.stationary_desc = stationary_desc
                 stationaryinventory.part_number = part_number
                 stationaryinventory.color = color
-                stationaryinventory.uom = uom
+                stationaryinventory.uom = Uom.objects.get(id=uom_id)
                 stationaryinventory.supplier_name = supplier
-                stationaryinventory.replenish_qty=replenish_qty
+                stationaryinventory.replenish_qty = replenish_qty
                 stationaryinventory.restock_qty = restock_qty
                 stationaryinventory.stock_qty = stock_qty
-                stationaryinventory.brand=brand
+                stationaryinventory.brand = brand
                 if request.FILES.get('picture') is not None:
                     stationaryinventory.photo = request.FILES.get('picture')
                 else:
@@ -966,11 +1011,13 @@ def stationaryinventoryadd(request):
                     "messages": "Stationary Inventory information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
+
 @ajax_login_required
 def getStationary(request):
     if request.method == "POST":
@@ -984,7 +1031,7 @@ def getStationary(request):
                 'stock_qty': stationary.stock_qty,
                 'replenish_qty': stationary.replenish_qty,
                 'restock_qty': stationary.restock_qty,
-                'uom': stationary.uom,
+                'uom': stationary.uom.id,
                 'color': stationary.color,
                 'brand': stationary.brand,
                 'photo': stationary.photo.url,
@@ -999,32 +1046,33 @@ def getStationary(request):
                 'stock_qty': stationary.stock_qty,
                 'replenish_qty': stationary.replenish_qty,
                 'restock_qty': stationary.restock_qty,
-                'uom': stationary.uom,
+                'uom': stationary.uom.id,
                 'color': stationary.color,
                 'brand': stationary.brand,
                 'supplier': stationary.supplier_name,
                 'photo': ''
-
             }
         return JsonResponse(json.dumps(data), safe=False)
+
 
 @ajax_login_required
 def check_stationary_code(request):
     if request.method == "POST":
         if Stationary.objects.all().exists():
-            stationary= Stationary.objects.all().order_by('-stationary_code')[0]
+            stationary = Stationary.objects.all().order_by('-stationary_code')[0]
             data = {
                 "status": "exist",
                 "stationary": stationary.stationary_code
             }
-        
+
             return JsonResponse(data)
         else:
             data = {
                 "status": "no exist"
             }
-        
+
             return JsonResponse(data)
+
 
 @ajax_login_required
 def ajax_stationary(request):
@@ -1032,6 +1080,7 @@ def ajax_stationary(request):
         stationarys = Stationary.objects.all()
 
         return render(request, 'inventorys/ajax-stationary.html', {'stationarys': stationarys})
+
 
 @ajax_login_required
 def ajax_filter_stationary(request):
@@ -1044,9 +1093,10 @@ def ajax_filter_stationary(request):
 
         elif search_color != "" and search_num != "" and search_brand == "":
             stationarys = Stationary.objects.filter(color__iexact=search_color, stationary_code__iexact=search_num)
-        
+
         elif search_color != "" and search_num != "" and search_brand != "":
-            stationarys = Stationary.objects.filter(color__iexact=search_color, stationary_code__iexact=search_num, brand__iexact=search_brand)
+            stationarys = Stationary.objects.filter(color__iexact=search_color, stationary_code__iexact=search_num,
+                                                    brand__iexact=search_brand)
 
         elif search_color == "" and search_num != "" and search_brand == "":
             stationarys = Stationary.objects.filter(stationary_code__iexact=search_num)
@@ -1058,12 +1108,12 @@ def ajax_filter_stationary(request):
             stationarys = Stationary.objects.filter(brand__iexact=search_brand)
 
         elif search_color != "" and search_num == "" and search_brand != "":
-            stationarys = Stationary.objects.filter(color__iexact=search_color,brand__iexact=search_brand)
+            stationarys = Stationary.objects.filter(color__iexact=search_color, brand__iexact=search_brand)
 
         return render(request, 'inventorys/ajax-stationary.html', {'stationarys': stationarys})
 
 
-#HARDWARE part
+# HARDWARE part
 @method_decorator(login_required, name='dispatch')
 class InventoryHardwareView(ListView):
     model = Hardware
@@ -1075,7 +1125,9 @@ class InventoryHardwareView(ListView):
         context['hardware_nums'] = Hardware.objects.order_by('hardware_code').values('hardware_code').distinct()
         context['brands'] = Hardware.objects.order_by('brand').values('brand').distinct()
         context['suppliers'] = Company.objects.filter(associate="Supplier")
+        context['uoms']=Uom.objects.all()
         return context
+
 
 @ajax_login_required
 def hardwaredelete(request):
@@ -1086,13 +1138,14 @@ def hardwaredelete(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 @ajax_login_required
 def hardwareinventoryadd(request):
     if request.method == "POST":
         hardware_code = request.POST.get('hardware_code')
         hardware_desc = request.POST.get('hardware_desc')
         serial_number = request.POST.get('serial_number')
-        uom = request.POST.get('uom')
+        uom_id = request.POST.get('uom')
         expiry_date = request.POST.get('expiry_date')
         licensing_date = request.POST.get('licensing_date')
         remark = request.POST.get('remark')
@@ -1106,7 +1159,7 @@ def hardwareinventoryadd(request):
                     hardware_code=hardware_code,
                     hardware_desc=hardware_desc,
                     serial_number=serial_number,
-                    uom=uom,
+                    uom=Uom.objects.get(id=uom_id),
                     expiry_date=expiry_date,
                     licensing_date=licensing_date,
                     remark=remark,
@@ -1120,7 +1173,7 @@ def hardwareinventoryadd(request):
                     "status": "Success",
                     "messages": "HardWare Inventory information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -1128,16 +1181,16 @@ def hardwareinventoryadd(request):
         else:
             try:
                 hardwareinventory = Hardware.objects.get(id=hardwareid)
-                hardwareinventory.hardware_code=hardware_code
+                hardwareinventory.hardware_code = hardware_code
                 hardwareinventory.hardware_desc = hardware_desc
                 hardwareinventory.serial_number = serial_number
-                hardwareinventory.uom = uom
+                hardwareinventory.uom = Uom.objects.get(id=uom_id)
                 hardwareinventory.supplier_name = supplier
-                hardwareinventory.expiry_date=expiry_date
-                hardwareinventory.licensing_date=licensing_date
+                hardwareinventory.expiry_date = expiry_date
+                hardwareinventory.licensing_date = licensing_date
                 hardwareinventory.remark = remark
                 hardwareinventory.stock_qty = stock_qty
-                hardwareinventory.brand=brand
+                hardwareinventory.brand = brand
                 if request.FILES.get('picture') is not None:
                     hardwareinventory.photo = request.FILES.get('picture')
                 else:
@@ -1149,11 +1202,13 @@ def hardwareinventoryadd(request):
                     "messages": "HardWare Inventory information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
+
 @ajax_login_required
 def getHardware(request):
     if request.method == "POST":
@@ -1168,7 +1223,7 @@ def getHardware(request):
                 'expiry_date': hardware.expiry_date.strftime('%d %b, %Y'),
                 'licensing_date': hardware.licensing_date.strftime('%d %b, %Y'),
                 'remark': hardware.remark,
-                'uom': hardware.uom,
+                'uom': hardware.uom.id,
                 'brand': hardware.brand,
                 'photo': hardware.photo.url,
                 'supplier': hardware.supplier_name
@@ -1183,7 +1238,7 @@ def getHardware(request):
                 'expiry_date': hardware.expiry_date.strftime('%d %b, %Y'),
                 'licensing_date': hardware.licensing_date.strftime('%d %b, %Y'),
                 'remark': hardware.remark,
-                'uom': hardware.uom,
+                'uom': hardware.uom.id,
                 'brand': hardware.brand,
                 'supplier': hardware.supplier_name,
                 'photo': ''
@@ -1191,12 +1246,14 @@ def getHardware(request):
             }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def ajax_hardware(request):
     if request.method == "POST":
         hardwares = Hardware.objects.all()
 
         return render(request, 'inventorys/ajax-hardware.html', {'hardwares': hardwares})
+
 
 @ajax_login_required
 def ajax_filter_hardware(request):
@@ -1209,9 +1266,10 @@ def ajax_filter_hardware(request):
 
         elif search_hardware != "" and search_num != "" and search_brand == "":
             hardwares = Hardware.objects.filter(hardware_desc__iexact=search_hardware, hardware_code__iexact=search_num)
-        
+
         elif search_hardware != "" and search_num != "" and search_brand != "":
-            hardwares = Hardware.objects.filter(hardware_desc__iexact=search_hardware, hardware_code__iexact=search_num, brand__iexact=search_brand)
+            hardwares = Hardware.objects.filter(hardware_desc__iexact=search_hardware, hardware_code__iexact=search_num,
+                                                brand__iexact=search_brand)
 
         elif search_hardware == "" and search_num != "" and search_brand == "":
             hardwares = Hardware.objects.filter(hardware_code__iexact=search_num)
@@ -1223,31 +1281,32 @@ def ajax_filter_hardware(request):
             hardwares = Hardware.objects.filter(brand__iexact=search_brand)
 
         elif search_hardware != "" and search_num == "" and search_brand != "":
-            hardwares = Hardware.objects.filter(hardware_desc__iexact=search_hardware,brand__iexact=search_brand)
+            hardwares = Hardware.objects.filter(hardware_desc__iexact=search_hardware, brand__iexact=search_brand)
 
         return render(request, 'inventorys/ajax-hardware.html', {'hardwares': hardwares})
 
+
 def ajax_import_hardwares(request):
-    
     if request.method == 'POST':
-        org_column_names = ["hardware_code", "hardware_desc", "supplier_name",  "serial_number", "brand", "uom", "expiry_date","licensing_date", "stock_qty", "remark"]
-        
+        org_column_names = ["hardware_code", "hardware_desc", "supplier_name", "serial_number", "brand", "uom",
+                            "expiry_date", "licensing_date", "stock_qty", "remark"]
+
         csv_file = request.FILES['file']
         contents = csv_file.read().decode('UTF-8')
         path = "temp.csv"
-        f = open(path,'w')
+        f = open(path, 'w')
         f.write(contents)
         f.close()
 
-        df = pd.read_csv(path)    
+        df = pd.read_csv(path)
         df.fillna("", inplace=True)
         column_names = list(df)
 
         if len(column_names) == 1:
-            df = pd.read_csv(path, delimiter = ';', decimal = ',', encoding = 'utf-8')    
+            df = pd.read_csv(path, delimiter=';', decimal=',', encoding='utf-8')
             df.fillna("", inplace=True)
             column_names = list(df)
-        
+
         dif_len = len(list(set(org_column_names) - set(column_names)))
 
         if dif_len == 0:
@@ -1263,12 +1322,14 @@ def ajax_import_hardwares(request):
                             hardware_code=row["hardware_code"],
                             hardware_desc=row["hardware_desc"],
                             serial_number=row["serial_number"],
-                            supplier_name=str(row["supplier_name"]), 
-                            brand=str(row["brand"]), 
-                            uom=str(row["uom"]), 
-                            expiry_date=datetime.datetime.strptime(row["expiry_date"],'%m/%d/%Y').replace(tzinfo=pytz.utc), 
-                            licensing_date=datetime.datetime.strptime(row["licensing_date"],'%m/%d/%Y').replace(tzinfo=pytz.utc), 
-                            remark=str(row["remark"]), 
+                            supplier_name=str(row["supplier_name"]),
+                            brand=str(row["brand"]),
+                            uom=str(row["uom"]),
+                            expiry_date=datetime.datetime.strptime(row["expiry_date"], '%m/%d/%Y').replace(
+                                tzinfo=pytz.utc),
+                            licensing_date=datetime.datetime.strptime(row["licensing_date"], '%m/%d/%Y').replace(
+                                tzinfo=pytz.utc),
+                            remark=str(row["remark"]),
                             stock_qty=row["stock_qty"],
                         )
                         hardware.save()
@@ -1281,23 +1342,24 @@ def ajax_import_hardwares(request):
                         hardware = Hardware.objects.filter(hardware_code=row["hardware_code"])[0]
                         hardware.hardware_code = row["hardware_code"]
                         hardware.hardware_desc = row["hardware_desc"]
-                        hardware.supplier_name=str(row["supplier_name"])
-                        hardware.serial_number=str(row["serial_number"])
-                        hardware.remark=str(row["remark"])
-                        hardware.brand=str(row["brand"])
-                        hardware.uom=str(row["uom"])
-                        hardware.expiry_date=row["expiry_date"]
-                        hardware.licensing_date=row["licensing_date"]
-                        hardware.stock_qty=row["stock_qty"]
+                        hardware.supplier_name = str(row["supplier_name"])
+                        hardware.serial_number = str(row["serial_number"])
+                        hardware.remark = str(row["remark"])
+                        hardware.brand = str(row["brand"])
+                        hardware.uom = str(row["uom"])
+                        hardware.expiry_date = row["expiry_date"]
+                        hardware.licensing_date = row["licensing_date"]
+                        hardware.stock_qty = row["stock_qty"]
                         hardware.save()
                         exist_record += 1
                     except Exception as e:
                         print(e)
                         failed_record += 1
             os.remove(path)
-            return JsonResponse({'status':'true','error_code':'0', 'total': record_count, 'success': success_record, 'failed': failed_record, 'exist': exist_record})
+            return JsonResponse({'status': 'true', 'error_code': '0', 'total': record_count, 'success': success_record,
+                                 'failed': failed_record, 'exist': exist_record})
         else:
             os.remove(path)
             # column count is not equals
-            return JsonResponse({'status':'false','error_code':'1'})
+            return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
