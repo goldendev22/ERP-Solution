@@ -4,7 +4,8 @@ from project.models import Project
 import sales
 from django.contrib.auth import login, logout
 from accounts import models
-from accounts.models import NotificationPrivilege, User, Role, WorkLog, MaterialLog, AssetLog, Holiday, OTCalculation, Privilege, UserCert, UserAddress, UserItemIssued, UserItemTool
+from accounts.models import NotificationPrivilege, User, Role, WorkLog, MaterialLog, AssetLog, Holiday, OTCalculation, \
+    Privilege, UserCert, UserAddress, UserItemIssued, UserItemTool
 from django.urls import reverse_lazy
 from django.contrib.auth.forms import AuthenticationForm
 from django.views.generic import FormView, RedirectView
@@ -36,12 +37,13 @@ from notifications import models as Notification
 from notifications.signals import notify
 import pandas as pd
 
+
 # Create your views here.
 
 class LoginView(FormView):
     form_class = AuthenticationForm
     template_name = "accounts/sign-in.html"
-    
+
     def get_success_url(self):
         return reverse_lazy("dashboard")
 
@@ -56,12 +58,14 @@ class LoginView(FormView):
 
         return super(LoginView, self).form_valid(form)
 
+
 class LogoutView(RedirectView):
     url = '/login/'
 
     def get(self, request, *args, **kwargs):
         logout(request)
         return super(LogoutView, self).get(request, *args, **kwargs)
+
 
 class SignupView(CreateView):
     model = User
@@ -74,12 +78,11 @@ class SignupView(CreateView):
         form = self.form_class(request.POST)
         email = request.POST.get('email')
 
-
         if form.is_valid():
             new_user = form.save(commit=False)
-            new_user.email= email
+            new_user.email = email
             new_user.save()
-            
+
             return HttpResponseRedirect(self.get_success_url())
 
         else:
@@ -87,7 +90,7 @@ class SignupView(CreateView):
             return self.render_to_response(self.get_context_data(form=form))
 
 
-#Users part =================================
+# Users part =================================
 @method_decorator(login_required, name='dispatch')
 @method_decorator(admin_required, name='dispatch')
 class UsersList(ListView):
@@ -103,12 +106,14 @@ class UsersList(ListView):
 
         return context
 
+
 @ajax_login_required
 def ajax_users(request):
     if request.method == "POST":
         users = User.objects.all().exclude(is_staff=True)
 
         return render(request, 'accounts/ajax-all-users.html', {'users': users})
+
 
 @ajax_login_required
 def ajax_users_filter(request):
@@ -121,7 +126,7 @@ def ajax_users_filter(request):
 
         elif search_empno != "" and search_nric != "" and search_role == "":
             users = User.objects.filter(empid__iexact=search_empno, nric__iexact=search_nric)
-        
+
         elif search_empno != "" and search_nric != "" and search_role != "":
             users = User.objects.filter(empid__iexact=search_empno, nric__iexact=search_nric, role__iexact=search_role)
 
@@ -135,9 +140,10 @@ def ajax_users_filter(request):
             users = User.objects.filter(role__iexact=search_role)
 
         elif search_empno != "" and search_nric == "" and search_role != "":
-            users = User.objects.filter(empid__iexact=search_empno,role__iexact=search_role)
+            users = User.objects.filter(empid__iexact=search_empno, role__iexact=search_role)
 
         return render(request, 'accounts/ajax-all-users.html', {'users': users})
+
 
 @method_decorator(login_required, name='dispatch')
 @method_decorator(admin_required, name='dispatch')
@@ -160,8 +166,9 @@ class UsersConfiguration(ListView):
             users_classify.append(temp_data)
         context['users_classify'] = users_classify
         context['role_lists'] = role_lists
-        
+
         return context
+
 
 @method_decorator(login_required, name='dispatch')
 class NotificationConfiguration(ListView):
@@ -187,6 +194,7 @@ class NotificationConfiguration(ListView):
 
         return context
 
+
 @ajax_login_required
 def ajaxaddRole(request):
     if request.method == "POST":
@@ -202,19 +210,21 @@ def ajaxaddRole(request):
             Role.objects.create(
                 name=role_name
             )
-            #notification send
+            # notification send
             sender = request.user
-            description = request.user.username +  ' - was created New Role ' + role_name
+            description = request.user.username + ' - was created New Role ' + role_name
             for receiver in User.objects.all():
                 if receiver.notificationprivilege.usergroup_created:
                     notify.send(sender, recipient=receiver, verb='Message', level="success", description=description)
             return JsonResponse({
-                    "status": "Success",
-                    "messages": "Role information added!"
-                })
+                "status": "Success",
+                "messages": "Role information added!"
+            })
+
 
 def id_generator(size=8, chars=string.ascii_uppercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
+
 
 @ajax_login_required
 def newUser(request):
@@ -252,12 +262,12 @@ def newUser(request):
                     )
                     Privilege.objects.create(
                         user_id=user.id,
-                        sales_summary = "Only View",
-                        sales_report = "Only View",
-                        proj_summary = "Only View",
-                        proj_ot = "Only View",
-                        prof_summary = "Only View",
-                        invent_material = "Only View"
+                        sales_summary="Only View",
+                        sales_report="Only View",
+                        proj_summary="Only View",
+                        proj_ot="Only View",
+                        prof_summary="Only View",
+                        invent_material="Only View"
                     )
                     NotificationPrivilege.objects.create(
                         user_id=user.id,
@@ -279,19 +289,20 @@ def newUser(request):
                         schedule_end=2,
                         password_change=True
                     )
-                    #notification send
+                    # notification send
                     sender = request.user
-                    description = 'User Emp No : ' + user.empid +  ' - New User was created by ' + request.user.username
+                    description = 'User Emp No : ' + user.empid + ' - New User was created by ' + request.user.username
                     for receiver in User.objects.all():
                         if receiver.notificationprivilege.user_no_created:
-                            notify.send(sender, recipient=receiver, verb='Message', level="success", description=description)
+                            notify.send(sender, recipient=receiver, verb='Message', level="success",
+                                        description=description)
                     return JsonResponse({
                         "status": "Success",
                         "messages": "New User information added!",
                         "newUserId": user.id,
                         "method": "add"
                     })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 print(e)
                 return JsonResponse({
                     "status": "Error",
@@ -301,15 +312,15 @@ def newUser(request):
         else:
             try:
                 user = User.objects.get(id=userid)
-                user.empid=empno
-                user.first_name=firstname
-                user.last_name=lastname
-                user.nationality=nationality
-                user.nric=nric
-                user.role=role
-                user.phone=phone
-                user.password=password
-                user.username=firstname + lastname
+                user.empid = empno
+                user.first_name = firstname
+                user.last_name = lastname
+                user.nationality = nationality
+                user.nric = nric
+                user.role = role
+                user.phone = phone
+                user.password = password
+                user.username = firstname + lastname
                 user.save()
                 return JsonResponse({
                     "status": "Success",
@@ -318,7 +329,7 @@ def newUser(request):
                     "method": "update"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Updating Error!"
@@ -328,12 +339,12 @@ def newUser(request):
 @method_decorator(login_required, name='dispatch')
 class UserDetailView(DetailView):
     model = User
-    template_name="accounts/userdetail.html"
+    template_name = "accounts/userdetail.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         content_pk = self.kwargs.get('pk')
-        #context['user'] = User.objects.get(id=content_pk)
+        # context['user'] = User.objects.get(id=content_pk)
         current_user = User.objects.get(id=content_pk)
         context['countrys'] = Country.objects.all()
         context['roles'] = Role.objects.all()
@@ -347,13 +358,15 @@ class UserDetailView(DetailView):
             context['useraddress'] = []
 
         context['issueditems'] = UserItemIssued.objects.filter(empid__iexact=current_user.empid)
-        context['issueusers'] = User.objects.filter(Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
+        context['issueusers'] = User.objects.filter(
+            Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
         return context
+
 
 @ajax_login_required
 def UpdateUser(request):
     if request.method == "POST":
-        
+
         empno = request.POST.get('empno')
         firstname = request.POST.get('firstname')
         lastname = request.POST.get('lastname')
@@ -382,36 +395,36 @@ def UpdateUser(request):
         password = make_password(password)
         try:
             user = User.objects.get(id=userid)
-            
-            user.empid=empno
-            user.first_name=firstname
-            user.last_name=lastname
-            user.nationality=nationality
-            user.nric=nric
-            user.role=role
-            user.phone=phone
-            user.password=password
-            user.password_box=passwordbox
-            user.basic_salary=basic_salary
-            user.username=username
-            user.dob=dob
-            user.email=email
-            user.passport_expiry=passport_expiry
-            user.passport_no=passport_no
-            user.is_active = True
-            user.wp_type=wp_type
-            user.wp_no=wp_no
-            user.wp_expiry=wp_expiry
 
-            user.pincode=pincode
-            user.fcm_token=fcm_token
+            user.empid = empno
+            user.first_name = firstname
+            user.last_name = lastname
+            user.nationality = nationality
+            user.nric = nric
+            user.role = role
+            user.phone = phone
+            user.password = password
+            user.password_box = passwordbox
+            user.basic_salary = basic_salary
+            user.username = username
+            user.dob = dob
+            user.email = email
+            user.passport_expiry = passport_expiry
+            user.passport_no = passport_no
+            user.is_active = True
+            user.wp_type = wp_type
+            user.wp_no = wp_no
+            user.wp_expiry = wp_expiry
+
+            user.pincode = pincode
+            user.fcm_token = fcm_token
             user.save()
             if UserAddress.objects.filter(emp_id=user.id).exists():
                 useraddress = UserAddress.objects.get(emp_id=user.id)
-                useraddress.address=address
-                useraddress.unit=unit
-                useraddress.postal_code=postalcode
-                useraddress.country_id=country
+                useraddress.address = address
+                useraddress.unit = unit
+                useraddress.postal_code = postalcode
+                useraddress.country_id = country
                 useraddress.save()
             else:
                 UserAddress.objects.create(
@@ -431,18 +444,20 @@ def UpdateUser(request):
                     'uid': urlsafe_base64_encode(force_bytes(user.pk)),
                     'token': default_token_generator.make_token(user),
                 }
-                send_active_mail(mail_subject, email_template_name=None,context=mail_context, to_email=[user.email],html_email_template_name='email.html')
+                send_active_mail(mail_subject, email_template_name=None, context=mail_context, to_email=[user.email],
+                                 html_email_template_name='email.html')
 
             return JsonResponse({
                 "status": "Success",
                 "messages": "New User information updated!"
             })
-        except IntegrityError as e: 
+        except IntegrityError as e:
             print(e)
             return JsonResponse({
                 "status": "Error",
                 "messages": "Error is existed!"
             })
+
 
 @method_decorator(login_required, name='dispatch')
 class WorkLogList(ListView):
@@ -462,6 +477,7 @@ class WorkLogList(ListView):
             context['exist_current_year'] = False
         return context
 
+
 @ajax_login_required
 def ajax_worklog(request):
     if request.method == "POST":
@@ -471,6 +487,7 @@ def ajax_worklog(request):
 
         return render(request, 'accounts/ajax-worklog.html', {'worklogs': worklogs})
 
+
 @ajax_login_required
 def ajax_export_worklog(request):
     resource = WorkLogResource()
@@ -479,27 +496,28 @@ def ajax_export_worklog(request):
     response['Content-Disposition'] = 'attachment; filename="work-log.csv"'
     return response
 
+
 def ajax_import_worklog(request):
-    
     if request.method == 'POST':
-        org_column_names = ['emp_no', 'project_name', 'projectcode', 'checkin_time', 'checkin_lat', 'checkin_lng', 'checkout_time', 'checkout_lat', 'checkout_lng']
-        
+        org_column_names = ['emp_no', 'project_name', 'projectcode', 'checkin_time', 'checkin_lat', 'checkin_lng',
+                            'checkout_time', 'checkout_lat', 'checkout_lng']
+
         csv_file = request.FILES['file']
         contents = csv_file.read().decode('UTF-8')
         path = "temp.csv"
-        f = open(path,'w')
+        f = open(path, 'w')
         f.write(contents)
         f.close()
 
-        df = pd.read_csv(path)    
+        df = pd.read_csv(path)
         df.fillna("", inplace=True)
         column_names = list(df)
 
         if len(column_names) == 1:
-            df = pd.read_csv(path, delimiter = ';', decimal = ',', encoding = 'utf-8')    
+            df = pd.read_csv(path, delimiter=';', decimal=',', encoding='utf-8')
             df.fillna("", inplace=True)
             column_names = list(df)
-        
+
         dif_len = len(list(set(org_column_names) - set(column_names)))
 
         if dif_len == 0:
@@ -515,10 +533,12 @@ def ajax_import_worklog(request):
                             emp_no=row["emp_no"],
                             project_name=row["project_name"],
                             projectcode=row["projectcode"],
-                            checkin_time=datetime.datetime.strptime(row["checkin_time"],'%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc),
+                            checkin_time=datetime.datetime.strptime(row["checkin_time"], '%Y-%m-%d %H:%M:%S').replace(
+                                tzinfo=pytz.utc),
                             checkin_lat=row["checkin_lat"],
                             checkin_lng=row["checkin_lng"],
-                            checkout_time=datetime.datetime.strptime(row["checkout_time"],'%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc),
+                            checkout_time=datetime.datetime.strptime(row["checkout_time"], '%Y-%m-%d %H:%M:%S').replace(
+                                tzinfo=pytz.utc),
                             checkout_lat=row["checkout_lat"],
                             checkout_lng=row["checkout_lng"],
                         )
@@ -532,47 +552,52 @@ def ajax_import_worklog(request):
                         worklog = WorkLog.objects.filter(emp_no=row["emp_no"])[0]
                         worklog.emp_no = row["emp_no"]
                         worklog.project_name = row["project_name"]
-                        worklog.projectcode=str(row["projectcode"])
-                        worklog.checkin_time=datetime.datetime.strptime(row["checkin_time"],'%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc)
-                        worklog.checkin_lat=row["checkin_lat"]
-                        worklog.checkin_lng=str(row["checkin_lng"])
-                        worklog.checkout_time=datetime.datetime.strptime(row["checkout_time"],'%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc)
-                        worklog.checkout_lat=row["checkout_lat"]
-                        worklog.checkout_lng=row["checkout_lng"]
+                        worklog.projectcode = str(row["projectcode"])
+                        worklog.checkin_time = datetime.datetime.strptime(row["checkin_time"],
+                                                                          '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc)
+                        worklog.checkin_lat = row["checkin_lat"]
+                        worklog.checkin_lng = str(row["checkin_lng"])
+                        worklog.checkout_time = datetime.datetime.strptime(row["checkout_time"],
+                                                                           '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc)
+                        worklog.checkout_lat = row["checkout_lat"]
+                        worklog.checkout_lng = row["checkout_lng"]
                         worklog.save()
-                        
+
                         exist_record += 1
                     except Exception as e:
                         print(e)
                         failed_record += 1
             os.remove(path)
-            return JsonResponse({'status':'true','error_code':'0', 'total': record_count, 'success': success_record, 'failed': failed_record, 'exist': exist_record})
+            return JsonResponse({'status': 'true', 'error_code': '0', 'total': record_count, 'success': success_record,
+                                 'failed': failed_record, 'exist': exist_record})
         else:
             os.remove(path)
             # column count is not equals
-            return JsonResponse({'status':'false','error_code':'1'})
+            return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
+
 
 @ajax_login_required
 def ajax_get_project_name(request):
     if request.method == "POST":
         project_code = request.POST.get('project_code')
         if Project.objects.filter(proj_id__iexact=project_code).exists():
-            project= Project.objects.filter(proj_id__iexact=project_code).order_by('-proj_id')[0]
+            project = Project.objects.filter(proj_id__iexact=project_code).order_by('-proj_id')[0]
             data = {
                 "status": "exist",
                 "project_name": project.proj_name,
                 "latitude": project.latitude,
                 "longitude": project.longitude
             }
-        
+
             return JsonResponse(data)
         else:
             data = {
                 "status": "no exist"
             }
-        
+
             return JsonResponse(data)
+
 
 @ajax_login_required
 def ajax_worklog_filter(request):
@@ -581,11 +606,14 @@ def ajax_worklog_filter(request):
         search_empno = request.POST.get('search_empno')
         search_year = request.POST.get('search_year')
         if daterange != "":
-            startdate = datetime.datetime.strptime(daterange.split('-')[0].strip(),'%Y.%m.%d %H:%M').replace(tzinfo=pytz.utc)
-            enddate = datetime.datetime.strptime(daterange.split('-')[1].strip(), '%Y.%m.%d %H:%M').replace(tzinfo=pytz.utc)
+            startdate = datetime.datetime.strptime(daterange.split('-')[0].strip(), '%Y.%m.%d %H:%M').replace(
+                tzinfo=pytz.utc)
+            enddate = datetime.datetime.strptime(daterange.split('-')[1].strip(), '%Y.%m.%d %H:%M').replace(
+                tzinfo=pytz.utc)
         if search_year:
             if search_empno != "" and daterange != "":
-                worklogs = WorkLog.objects.filter(emp_no__iexact=search_empno, checkin_time__gte=startdate, checkout_time__lte=enddate)
+                worklogs = WorkLog.objects.filter(emp_no__iexact=search_empno, checkin_time__gte=startdate,
+                                                  checkout_time__lte=enddate)
             elif search_empno != "" and daterange == "":
                 worklogs = WorkLog.objects.filter(emp_no__iexact=search_empno)
             elif search_empno == "" and daterange != "":
@@ -594,13 +622,15 @@ def ajax_worklog_filter(request):
                 worklogs = WorkLog.objects.filter(checkin_time__iso_year=search_year)
         else:
             if search_empno != "" and daterange != "":
-                worklogs = WorkLog.objects.filter(emp_no__iexact=search_empno, checkin_time__gte=startdate, checkout_time__lte=enddate)
+                worklogs = WorkLog.objects.filter(emp_no__iexact=search_empno, checkin_time__gte=startdate,
+                                                  checkout_time__lte=enddate)
             elif search_empno != "" and daterange == "":
                 worklogs = WorkLog.objects.filter(emp_no__iexact=search_empno)
             elif search_empno == "" and daterange != "":
                 worklogs = WorkLog.objects.filter(checkin_time__gte=startdate, checkout_time__lte=enddate)
 
         return render(request, 'accounts/ajax-worklog.html', {'worklogs': worklogs})
+
 
 @ajax_login_required
 def worklogadd(request):
@@ -632,7 +662,7 @@ def worklogadd(request):
                     "status": "Success",
                     "messages": "WorkLog information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -640,7 +670,7 @@ def worklogadd(request):
         else:
             try:
                 worklog = WorkLog.objects.get(id=worklogid)
-                worklog.emp_no=emp_no
+                worklog.emp_no = emp_no
                 worklog.project_name = project_name
                 worklog.projectcode = project_code
                 worklog.checkin_time = date_parser.parse(checkin_time).replace(tzinfo=pytz.utc)
@@ -656,11 +686,12 @@ def worklogadd(request):
                     "messages": "WorkLog information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def worklogdelete(request):
@@ -670,6 +701,7 @@ def worklogdelete(request):
         worklog.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def getWorklog(request):
@@ -699,9 +731,12 @@ class MateriallogList(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['emp_nos'] = MaterialLog.objects.exclude(emp_no=None).order_by('emp_no').values('emp_no').distinct()
-        context['materialcodes'] = MaterialLog.objects.exclude(material_code=None).order_by('material_code').values('material_code').distinct()
-        context['materialnames'] = MaterialLog.objects.exclude(project_name=None).order_by('project_name').values('project_name').distinct()
+        context['materialcodes'] = MaterialLog.objects.exclude(material_code=None).order_by('material_code').values(
+            'material_code').distinct()
+        context['materialnames'] = MaterialLog.objects.exclude(project_name=None).order_by('project_name').values(
+            'project_name').distinct()
         return context
+
 
 @ajax_login_required
 def ajax_materiallog(request):
@@ -710,9 +745,9 @@ def ajax_materiallog(request):
 
         return render(request, 'accounts/ajax-materiallog.html', {'materiallogs': materiallogs})
 
+
 @ajax_login_required
 def ajax_materiallog_filter(request):
-       
     if request.method == "POST":
         search_empno = request.POST.get('search_empno')
         search_name = request.POST.get('search_name')
@@ -722,23 +757,26 @@ def ajax_materiallog_filter(request):
 
         elif search_empno != "" and search_name != "" and search_code == "":
             materiallogs = MaterialLog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name)
-        
+
         elif search_empno != "" and search_name != "" and search_code != "":
-            materiallogs = MaterialLog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name, material_code__iexact=search_code)
+            materiallogs = MaterialLog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name,
+                                                      material_code__iexact=search_code)
 
         elif search_empno == "" and search_name != "" and search_code == "":
             materiallogs = MaterialLog.objects.filter(project_name__iexact=search_name)
 
         elif search_empno == "" and search_name != "" and search_code != "":
-            materiallogs = MaterialLog.objects.filter(material_code__iexact=search_code, project_name__iexact=search_name)
+            materiallogs = MaterialLog.objects.filter(material_code__iexact=search_code,
+                                                      project_name__iexact=search_name)
 
         elif search_empno == "" and search_name == "" and search_code != "":
             materiallogs = MaterialLog.objects.filter(material_code__iexact=search_code)
 
         elif search_empno != "" and search_name == "" and search_code != "":
-            materiallogs = MaterialLog.objects.filter(emp_no__iexact=search_empno,material_code__iexact=search_code)
+            materiallogs = MaterialLog.objects.filter(emp_no__iexact=search_empno, material_code__iexact=search_code)
 
         return render(request, 'accounts/ajax-materiallog.html', {'materiallogs': materiallogs})
+
 
 @ajax_login_required
 def materiallogadd(request):
@@ -764,7 +802,7 @@ def materiallogadd(request):
                     "status": "Success",
                     "messages": "Materiallog information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -785,11 +823,12 @@ def materiallogadd(request):
                     "messages": "MaterialLog information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def materiallogdelete(request):
@@ -799,6 +838,7 @@ def materiallogdelete(request):
         materiallog.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def getMateriallog(request):
@@ -816,6 +856,7 @@ def getMateriallog(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @method_decorator(login_required, name='dispatch')
 class AssetLogList(ListView):
     model = AssetLog
@@ -824,9 +865,12 @@ class AssetLogList(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['emp_nos'] = AssetLog.objects.exclude(emp_no=None).order_by('emp_no').values('emp_no').distinct()
-        context['assetcodes'] = AssetLog.objects.exclude(asset_code=None).order_by('asset_code').values('asset_code').distinct()
-        context['assetnames'] = AssetLog.objects.exclude(asset_name=None).order_by('asset_name').values('asset_name').distinct()
+        context['assetcodes'] = AssetLog.objects.exclude(asset_code=None).order_by('asset_code').values(
+            'asset_code').distinct()
+        context['assetnames'] = AssetLog.objects.exclude(asset_name=None).order_by('asset_name').values(
+            'asset_name').distinct()
         return context
+
 
 @ajax_login_required
 def ajax_assetlog(request):
@@ -834,6 +878,7 @@ def ajax_assetlog(request):
         assetlogs = AssetLog.objects.all()
 
         return render(request, 'accounts/ajax-assetlog.html', {'assetlogs': assetlogs})
+
 
 @ajax_login_required
 def ajax_assetlog_filter(request):
@@ -846,23 +891,26 @@ def ajax_assetlog_filter(request):
 
         elif search_assetno != "" and search_assetcode != "" and search_assetname == "":
             assetlogs = AssetLog.objects.filter(emp_no__iexact=search_assetno, asset_code__iexact=search_assetcode)
-        
+
         elif search_assetno != "" and search_assetcode != "" and search_assetname != "":
-            assetlogs = AssetLog.objects.filter(emp_no__iexact=search_assetno, asset_code__iexact=search_assetcode, asset_name__iexact=search_assetname)
+            assetlogs = AssetLog.objects.filter(emp_no__iexact=search_assetno, asset_code__iexact=search_assetcode,
+                                                asset_name__iexact=search_assetname)
 
         elif search_assetno == "" and search_assetcode != "" and search_assetname == "":
             assetlogs = AssetLog.objects.filter(asset_code__iexact=search_assetcode)
 
         elif search_assetno == "" and search_assetcode != "" and search_assetname != "":
-            assetlogs = AssetLog.objects.filter(asset_code__iexact=search_assetcode, asset_name__iexact=search_assetname)
+            assetlogs = AssetLog.objects.filter(asset_code__iexact=search_assetcode,
+                                                asset_name__iexact=search_assetname)
 
         elif search_assetno == "" and search_assetcode == "" and search_assetname != "":
             assetlogs = AssetLog.objects.filter(asset_name__iexact=search_assetname)
 
         elif search_assetno != "" and search_assetcode == "" and search_assetname != "":
-            assetlogs = AssetLog.objects.filter(emp_no__iexact=search_assetno,asset_name__iexact=search_assetname)
+            assetlogs = AssetLog.objects.filter(emp_no__iexact=search_assetno, asset_name__iexact=search_assetname)
 
         return render(request, 'accounts/ajax-assetlog.html', {'assetlogs': assetlogs})
+
 
 @ajax_login_required
 def assetlogadd(request):
@@ -888,7 +936,7 @@ def assetlogadd(request):
                     "status": "Success",
                     "messages": "Asset Log information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -909,11 +957,12 @@ def assetlogadd(request):
                     "messages": "Assetlog information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def assetlogdelete(request):
@@ -923,6 +972,7 @@ def assetlogdelete(request):
         assetlog.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def getAssetlog(request):
@@ -941,16 +991,18 @@ def getAssetlog(request):
         return JsonResponse(json.dumps(data), safe=False)
 
 
-#OT calculation part
+# OT calculation part
 @method_decorator(login_required, name='dispatch')
 class OtcalculationList(ListView):
     model = OTCalculation
     template_name = "accounts/ot_calculation.html"
 
+
 @method_decorator(login_required, name='dispatch')
 class OtcalculationSummary(ListView):
     model = OTCalculation
     template_name = "accounts/ot-calculation-summary.html"
+
 
 @method_decorator(login_required, name='dispatch')
 class OtcalculationFilterSummary(ListView):
@@ -966,56 +1018,93 @@ class OtcalculationFilterSummary(ListView):
 
         return context
 
+
 @ajax_login_required
 def ajax_otcalculation(request):
     if request.method == "POST":
         current_year = datetime.datetime.today().year
         current_month = datetime.datetime.today().month
         str_query = "SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date) AND YEAR(W.checkin_time) = " + str(current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
+
+        # For test
+        # current_year = "2021"
+        # current_month = "8"
+        # str_query = "SELECT W.id, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W where YEAR(W.checkin_time) = " + str(
+        #     current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
+
         query_ots = WorkLog.objects.raw(str_query)
+
         for q in query_ots:
             if q.checkout_time is not None and q.checkin_time is not None:
                 modetime = datetime.timedelta(hours=17)
                 holiday_modetime = datetime.timedelta(hours=8)
-                t = q.checkout_time
+
+                t_out = q.checkout_time
+                t_in = q.checkin_time
                 if q.checkout_time.date() > q.checkin_time.date():
-                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second) + datetime.timedelta(hours=24)
+                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute,
+                                                  seconds=t_out.second) + datetime.timedelta(hours=24)
                 else:
-                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute, seconds=t_out.second)
+
+                timestart = datetime.timedelta(hours=t_in.hour, minutes=t_in.minute, seconds=t_in.second)
+
                 check_weekday = q.checkin_time.weekday()
-            
                 check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
-                if check_weekday == 6 or check_holiday == True:
-                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds()//60
-                    ph_mins = ph_min_check//15
-                    if ph_mins > 32:
-                        q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25 - 1)
-                        q.meal_allowance = 0
+
+                q.firsthr = 0
+                q.meal_allowance = 0
+                q.secondhr = 0
+                q.ph = 0
+
+
+                # For holiday
+                if check_holiday == True:
+                    q.ph += 1
+
+                # For Sunday
+                if check_weekday == 6:
+                    # over 5:00 pm
+                    if timediff > modetime:
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
+                        # over 5 hours of overtime allow meals.
+
+                        if mins >= 20:
+                            q.firsthr += mins * 0.25 - 0.5
+                            q.meal_allowance += 1
+                        # under 5 hours of overtime just consider 1.5HR
+                        else:
+                            q.firsthr += mins * 0.25
+
+                        # For the 2.0HR part of over 5:00 pm
+                        if modetime > timestart:
+                            hr2_min_check = (modetime - timestart).total_seconds() // 60
+                            hr2_mins = hr2_min_check // 15
+                            if hr2_mins > 16:
+                                q.secondhr += hr2_mins * 0.25 - 1
+                            else:
+                                q.secondhr += hr2_mins * 0.25
                     else:
-                        q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25)
-                        q.meal_allowance = 0
+                        ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
+                        ph_mins = ph_min_check // 15
+                        if ph_mins > 16:
+                            q.secondhr += (ph_mins * 0.25 - 1)
+                        else:
+                            q.secondhr += (ph_mins * 0.25)
+                # For normal days (Mon ~ Sat)
                 else:
                     if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds()//60
-                        mins = min_check//15
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
                         if mins >= 20:
-                            q.firsthr = str(mins*0.25 - 0.5)
-                            q.secondhr = 0
-                            q.meal_allowance = 1
-                            
+                            q.firsthr += (mins * 0.25 - 0.5)
+                            q.meal_allowance += 1
                         else:
-                            q.firsthr = str(mins*0.25)
-                            q.secondhr = 0
-                            q.meal_allowance = 0
+                            q.firsthr += (mins * 0.25)
 
-                    else:
-                        q.firsthr = str(0)
-                        q.secondhr = 0
-                        q.meal_allowance = 0
-                
         return render(request, 'accounts/ajax-otcalculation.html', {'otcalculations': query_ots})
+
 
 @ajax_login_required
 def ajax_otcalculation_summary(request):
@@ -1028,34 +1117,35 @@ def ajax_otcalculation_summary(request):
                 holiday_modetime = datetime.timedelta(hours=8)
                 t = q.checkout_time
                 if q.checkout_time.date() > q.checkin_time.date():
-                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second) + datetime.timedelta(hours=24)
+                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute,
+                                                  seconds=t.second) + datetime.timedelta(hours=24)
                 else:
                     timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
                 check_weekday = q.checkin_time.weekday()
-            
+
                 check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
                 if check_weekday == 6 or check_holiday == True:
-                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds()//60
-                    ph_mins = ph_min_check//15
+                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
+                    ph_mins = ph_min_check // 15
                     if ph_mins > 32:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25 - 1)
+                        q.secondhr = str(ph_mins * 0.25 - 1)
                         q.meal_allowance = 0
                     else:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25)
+                        q.secondhr = str(ph_mins * 0.25)
                         q.meal_allowance = 0
                 else:
                     if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds()//60
-                        mins = min_check//15
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
                         if mins >= 20:
-                            q.firsthr = str(mins*0.25 - 0.5)
+                            q.firsthr = str(mins * 0.25 - 0.5)
                             q.secondhr = 0
                             q.meal_allowance = 1
-                            
+
                         else:
-                            q.firsthr = str(mins*0.25)
+                            q.firsthr = str(mins * 0.25)
                             q.secondhr = 0
                             q.meal_allowance = 0
 
@@ -1068,10 +1158,10 @@ def ajax_otcalculation_summary(request):
         summary_data = []
         for query_ot in query_ots:
             if str(query_ot.emp_no) in empdata:
-                pass 
+                pass
             else:
                 empdata.append(query_ot.emp_no)
-        
+
         for empd in empdata:
             summary_firsthr = 0
             summary_secondhr = 0
@@ -1092,8 +1182,9 @@ def ajax_otcalculation_summary(request):
                 'secondhr': summary_secondhr,
                 'meal_allowance': summary_meal,
             })
-        
+
         return render(request, 'accounts/ajax-otcalculation-summary.html', {'otsummaries': summary_data})
+
 
 @ajax_login_required
 def ajax_otcalculation_filter_summary(request):
@@ -1108,34 +1199,35 @@ def ajax_otcalculation_filter_summary(request):
                 holiday_modetime = datetime.timedelta(hours=8)
                 t = q.checkout_time
                 if q.checkout_time.date() > q.checkin_time.date():
-                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second) + datetime.timedelta(hours=24)
+                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute,
+                                                  seconds=t.second) + datetime.timedelta(hours=24)
                 else:
                     timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
                 check_weekday = q.checkin_time.weekday()
-            
+
                 check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
                 if check_weekday == 6 or check_holiday == True:
-                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds()//60
-                    ph_mins = ph_min_check//15
+                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
+                    ph_mins = ph_min_check // 15
                     if ph_mins > 32:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25 - 1)
+                        q.secondhr = str(ph_mins * 0.25 - 1)
                         q.meal_allowance = 0
                     else:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25)
+                        q.secondhr = str(ph_mins * 0.25)
                         q.meal_allowance = 0
                 else:
                     if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds()//60
-                        mins = min_check//15
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
                         if mins >= 20:
-                            q.firsthr = str(mins*0.25 - 0.5)
+                            q.firsthr = str(mins * 0.25 - 0.5)
                             q.secondhr = 0
                             q.meal_allowance = 1
-                            
+
                         else:
-                            q.firsthr = str(mins*0.25)
+                            q.firsthr = str(mins * 0.25)
                             q.secondhr = 0
                             q.meal_allowance = 0
 
@@ -1148,10 +1240,10 @@ def ajax_otcalculation_filter_summary(request):
         summary_filter_data = []
         for query_ot in query_ots:
             if str(query_ot.emp_no) in empdata:
-                pass 
+                pass
             else:
                 empdata.append(query_ot.emp_no)
-                
+
         for empd in empdata:
             summary_firsthr = 0
             summary_secondhr = 0
@@ -1172,8 +1264,9 @@ def ajax_otcalculation_filter_summary(request):
                 'secondhr': summary_secondhr,
                 'meal_allowance': summary_meal,
             })
-        
+
         return render(request, 'accounts/ajax-otcalculation-summary.html', {'otsummaries': summary_filter_data})
+
 
 @ajax_login_required
 def ajax_otcalculation_filter(request):
@@ -1187,35 +1280,36 @@ def ajax_otcalculation_filter(request):
                 modetime = datetime.timedelta(hours=17)
                 t = q.checkout_time
                 if q.checkout_time.date() > q.checkin_time.date():
-                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second) + datetime.timedelta(hours=24)
+                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute,
+                                                  seconds=t.second) + datetime.timedelta(hours=24)
                 else:
                     timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
                 check_weekday = q.checkin_time.weekday()
-                
+
                 check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
                 if check_weekday == 6 or check_holiday == True:
-                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds()//60
-                    ph_mins = ph_min_check//15
+                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
+                    ph_mins = ph_min_check // 15
                     if ph_mins > 32:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25 - 1)
+                        q.secondhr = str(ph_mins * 0.25 - 1)
                         q.meal_allowance = 0
                     else:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25)
+                        q.secondhr = str(ph_mins * 0.25)
                         q.meal_allowance = 0
                 else:
                     if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds()//60
-                        mins = min_check//15
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
                         # mins_remain = min_check%15
                         if mins >= 20:
-                            q.firsthr = str(mins*0.25 - 0.5)
+                            q.firsthr = str(mins * 0.25 - 0.5)
                             q.secondhr = 0
                             q.meal_allowance = 1
-                            
+
                         else:
-                            q.firsthr = str(mins*0.25)
+                            q.firsthr = str(mins * 0.25)
                             q.secondhr = 0
                             q.meal_allowance = 0
                     else:
@@ -1224,6 +1318,7 @@ def ajax_otcalculation_filter(request):
                         q.meal_allowance = 0
 
         return render(request, 'accounts/ajax-otcalculation.html', {'otcalculations': query_ots})
+
 
 @ajax_login_required
 def otcalculationadd(request):
@@ -1253,7 +1348,7 @@ def otcalculationadd(request):
                     "status": "Success",
                     "messages": "OT Calculation information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -1276,11 +1371,12 @@ def otcalculationadd(request):
                     "messages": "OT Calculation information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def otcalculationdelete(request):
@@ -1290,6 +1386,7 @@ def otcalculationdelete(request):
         otcalculation.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def getOtcalculation(request):
@@ -1306,18 +1403,18 @@ def getOtcalculation(request):
             'secondhr': otcalculation.secondhr,
             'meal_allowance': otcalculation.meal_allowance,
 
-
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def ajax_notification_privilege(request):
-    if request.method == "POST": 
-        project_no_created = request.POST.get('projectno_created')     
+    if request.method == "POST":
+        project_no_created = request.POST.get('projectno_created')
         project_status = request.POST.get('project_status')
-        project_end = request.POST.get('project_end')     
+        project_end = request.POST.get('project_end')
         tbm_no_created = request.POST.get('tbm_no_created')
-        inventory_item_deleted = request.POST.get('delete_item')     
+        inventory_item_deleted = request.POST.get('delete_item')
         stock_equal_restock = request.POST.get('restockqty')
         do_status = request.POST.get('do_status')
         usergroup_created = request.POST.get('usergroup_created')
@@ -1352,29 +1449,30 @@ def ajax_notification_privilege(request):
         else:
             NotificationPrivilege.objects.create(
                 user_id=username,
-                project_no_created = project_no_created,
-                project_status = project_status,
-                project_end = project_end,
-                tbm_no_created = tbm_no_created,
-                inventory_item_deleted = inventory_item_deleted,
-                stock_equal_restock = stock_equal_restock,
-                do_status = do_status,
-                usergroup_created = usergroup_created,
-                service_status = service_status,
-                user_no_created = user_no_created,
-                pc_status = pc_status,
-                claim_no_created = claim_no_created,
-                contract_end = contract_end,
-                hardware_end = hardware_end,
-                schedule_end = schedule_end,
-                password_change = password_change
-                )
+                project_no_created=project_no_created,
+                project_status=project_status,
+                project_end=project_end,
+                tbm_no_created=tbm_no_created,
+                inventory_item_deleted=inventory_item_deleted,
+                stock_equal_restock=stock_equal_restock,
+                do_status=do_status,
+                usergroup_created=usergroup_created,
+                service_status=service_status,
+                user_no_created=user_no_created,
+                pc_status=pc_status,
+                claim_no_created=claim_no_created,
+                contract_end=contract_end,
+                hardware_end=hardware_end,
+                schedule_end=schedule_end,
+                password_change=password_change
+            )
 
         return JsonResponse({"status": "ok"})
 
+
 @ajax_login_required
 def ajax_privilege_user_check(request):
-    if request.method == "POST": 
+    if request.method == "POST":
         userid = request.POST.get('userid')
         if Privilege.objects.filter(user_id=userid).exists():
             privilege = Privilege.objects.get(user_id=userid)
@@ -1389,9 +1487,10 @@ def ajax_privilege_user_check(request):
             }
             return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def ajax_notification_privilege_user_check(request):
-    if request.method == "POST": 
+    if request.method == "POST":
         userid = request.POST.get('userid')
         if NotificationPrivilege.objects.filter(user_id=userid).exists():
             noprivilege = NotificationPrivilege.objects.get(user_id=userid)
@@ -1416,14 +1515,15 @@ def ajax_notification_privilege_user_check(request):
 
             return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def ajax_privilege(request):
-    if request.method == "POST": 
-        salesummery = request.POST.get('salesummery')     
+    if request.method == "POST":
+        salesummery = request.POST.get('salesummery')
         salereport = request.POST.get('salereport')
-        projsummery = request.POST.get('projsummery')     
+        projsummery = request.POST.get('projsummery')
         projot = request.POST.get('projot')
-        inventmat = request.POST.get('inventmat')     
+        inventmat = request.POST.get('inventmat')
         profsummary = request.POST.get('profsummary')
         username = request.POST.get('username')
         if Privilege.objects.filter(user_id=username).exists():
@@ -1438,15 +1538,16 @@ def ajax_privilege(request):
         else:
             Privilege.objects.create(
                 user_id=username,
-                sales_summary = salesummery,
-                sales_report = salereport,
-                proj_summary = str(projsummery),
-                proj_ot = str(projot),
-                invent_material = str(inventmat),
-                prof_summary = str(profsummary)
-                )
+                sales_summary=salesummery,
+                sales_report=salereport,
+                proj_summary=str(projsummery),
+                proj_ot=str(projot),
+                invent_material=str(inventmat),
+                prof_summary=str(profsummary)
+            )
 
         return JsonResponse({"status": "ok"})
+
 
 def activateAccount(request, uidb64, token):
     try:
@@ -1454,13 +1555,14 @@ def activateAccount(request, uidb64, token):
         user = User.objects.get(pk=uid)
     except(TypeError, ValueError, OverflowError, User.DoesNotExist):
         user = None
-    if user is not None  and default_token_generator.check_token(user, token):
+    if user is not None and default_token_generator.check_token(user, token):
         user.is_active = True
         user.save()
-        #login(request, user,backend="django.contrib.auth.backends.ModelBackend")
+        # login(request, user,backend="django.contrib.auth.backends.ModelBackend")
         return redirect('/')
     else:
-        return JsonResponse({"status":'Activation link is invalid!'})
+        return JsonResponse({"status": 'Activation link is invalid!'})
+
 
 @ajax_login_required
 def usercertadd(request):
@@ -1485,7 +1587,7 @@ def usercertadd(request):
                     "status": "Success",
                     "messages": "User Certification information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -1493,11 +1595,11 @@ def usercertadd(request):
         else:
             try:
                 usercert = UserCert.objects.get(id=certid)
-                usercert.course=course
-                usercert.course_expiry=course_expiry
-                usercert.course_no=course_no
-                usercert.school=school
-                usercert.emp_id=sel_user.username
+                usercert.course = course
+                usercert.course_expiry = course_expiry
+                usercert.course_no = course_no
+                usercert.school = school
+                usercert.emp_id = sel_user.username
                 usercert.save()
 
                 return JsonResponse({
@@ -1505,11 +1607,12 @@ def usercertadd(request):
                     "messages": "User Certification information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def userissuetooladd(request):
@@ -1536,7 +1639,7 @@ def userissuetooladd(request):
                     "status": "Success",
                     "messages": "User Issued Tool information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -1544,12 +1647,12 @@ def userissuetooladd(request):
         else:
             try:
                 usertool = UserItemTool.objects.get(id=toolid)
-                usertool.description=tdescription
-                usertool.issue_date=tissued_date
-                usertool.uom=tuom
-                usertool.qty=tqty
-                usertool.issued_by=tissued_by
-                usertool.emp_id=sel_user.username
+                usertool.description = tdescription
+                usertool.issue_date = tissued_date
+                usertool.uom = tuom
+                usertool.qty = tqty
+                usertool.issued_by = tissued_by
+                usertool.emp_id = sel_user.username
                 usertool.save()
 
                 return JsonResponse({
@@ -1557,11 +1660,12 @@ def userissuetooladd(request):
                     "messages": "User Issued Tool information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def userissueppeadd(request):
@@ -1588,11 +1692,12 @@ def userissueppeadd(request):
                     "status": "Success",
                     "messages": "User Issued Item information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @method_decorator(login_required, name='dispatch')
 class NotificationView(ListView):
@@ -1602,8 +1707,9 @@ class NotificationView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['notifications'] = self.request.user.notifications.all()
-        
+
         return context
+
 
 @ajax_login_required
 def getUserSignature(request):
@@ -1620,13 +1726,14 @@ def getUserSignature(request):
             }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def updateUserSignature(request):
     if request.method == "POST":
         userid = request.POST.get('userid')
         try:
             usersignature = User.objects.get(id=userid)
-            usersignature.signature=request.FILES.get('signature')
+            usersignature.signature = request.FILES.get('signature')
             usersignature.save()
 
             return JsonResponse({
@@ -1634,10 +1741,8 @@ def updateUserSignature(request):
                 "messages": "User Signature updated!"
             })
 
-        except IntegrityError as e: 
+        except IntegrityError as e:
             return JsonResponse({
                 "status": "Error",
                 "messages": "Error is existed!"
             })
-
-         
