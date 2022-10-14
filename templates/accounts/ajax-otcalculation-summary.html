@@ -4,9 +4,10 @@
         <thead>
             <tr>
                 <th>Emp No</th>
-                <th>Basic Daily</th>
+                <th>Total Working Days</th>
                 <th>1.5HR</th>
                 <th>2.0HR</th>
+                <th>PH</th>
                 <th>Meal Allowance</th>
             </tr>
         </thead>
@@ -14,9 +15,10 @@
          {% for otsummary in otsummaries %}
             <tr>
                 <td class="align-middle">{{otsummary.emp_no|default_if_none:""}}</td>
-                <td class="align-middle">{{otsummary.basic_salary|default_if_none:""}}</td>
+                <td class="align-middle">{{otsummary.total_working_days|default_if_none:""}}</td>
                 <td class="align-middle">{{otsummary.firsthr|default_if_none:""}}</td>
                 <td class="align-middle">{{otsummary.secondhr|default_if_none:""}}</td>
+                <td class="align-middle">{{otsummary.ph|default_if_none:""}}</td>
                 <td class="align-middle">{{otsummary.meal_allowance|default_if_none:""}}</td>
             </tr>
         {% endfor %}
