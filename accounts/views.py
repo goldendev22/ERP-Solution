@@ -1024,7 +1024,8 @@ def ajax_otcalculation(request):
     if request.method == "POST":
         current_year = datetime.datetime.today().year
         current_month = datetime.datetime.today().month
-        str_query = "SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date) AND YEAR(W.checkin_time) = " + str(
+        str_query = "SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O" \
+                    " WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date) AND YEAR(W.checkin_time) = " + str(
             current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
 
         # For test
@@ -1033,6 +1034,88 @@ def ajax_otcalculation(request):
         # str_query = "SELECT W.id, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W where YEAR(W.checkin_time) = " + str(
         #     current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
 
+        query_ots = WorkLog.objects.raw(str_query)
+
+        for q in query_ots:
+
+            print("--- checkin ---", q.checkin_time)
+            if q.checkout_time is not None and q.checkin_time is not None:
+                modetime = datetime.timedelta(hours=17)
+                holiday_modetime = datetime.timedelta(hours=8)
+
+                t_out = q.checkout_time
+                t_in = q.checkin_time
+                if q.checkout_time.date() > q.checkin_time.date():
+                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute,
+                                                  seconds=t_out.second) + datetime.timedelta(hours=24)
+                else:
+                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute, seconds=t_out.second)
+
+                timestart = datetime.timedelta(hours=t_in.hour, minutes=t_in.minute, seconds=t_in.second)
+
+                check_weekday = q.checkin_time.weekday()
+                check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
+
+                q.firsthr = 0
+                q.meal_allowance = 0
+                q.secondhr = 0
+                q.ph = 0
+
+                # For holiday
+                if check_holiday == True:
+                    q.ph += 1
+
+                # For Sunday
+                if check_weekday == 6:
+                    # over 5:00 pm
+                    if timediff > modetime:
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
+                        # over 5 hours of overtime allow meals.
+
+                        if mins >= 20:
+                            q.firsthr += mins * 0.25 - 0.5
+                            q.meal_allowance += 1
+                        # under 5 hours of overtime just consider 1.5HR
+                        else:
+                            q.firsthr += mins * 0.25
+
+                        # For the 2.0HR part of over 5:00 pm
+                        if modetime > timestart:
+                            hr2_min_check = (modetime - timestart).total_seconds() // 60
+                            hr2_mins = hr2_min_check // 15
+                            if hr2_mins > 16:
+                                q.secondhr += hr2_mins * 0.25 - 1
+                            else:
+                                q.secondhr += hr2_mins * 0.25
+                    else:
+                        ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
+                        ph_mins = ph_min_check // 15
+                        if ph_mins >= 24:
+                            q.secondhr += (ph_mins * 0.25 - 1)
+                        else:
+                            q.secondhr += (ph_mins * 0.25)
+                # For normal days (Mon ~ Sat)
+                else:
+                    if timediff > modetime:
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
+                        if mins >= 20:
+                            q.firsthr += (mins * 0.25 - 0.5)
+                            q.meal_allowance += 1
+                        else:
+                            q.firsthr += (mins * 0.25)
+
+        return render(request, 'accounts/ajax-otcalculation.html', {'otcalculations': query_ots})
+
+@ajax_login_required
+def ajax_otcalculation_filter(request):
+    if request.method == "POST":
+        checkin_time = request.POST.get('checkin_time')
+        checkout_time = request.POST.get('checkout_time')
+        str_query = "SELECT F.id, F.approved_hour, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+
+        # str_query = "SELECT F.id, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id,W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
         query_ots = WorkLog.objects.raw(str_query)
 
         for q in query_ots:
@@ -1344,84 +1427,6 @@ def ajax_otcalculation_filter_summary(request):
 
         return render(request, 'accounts/ajax-otcalculation-summary.html', {'otsummaries': summary_filter_data})
 
-
-@ajax_login_required
-def ajax_otcalculation_filter(request):
-    if request.method == "POST":
-        checkin_time = request.POST.get('checkin_time')
-        checkout_time = request.POST.get('checkout_time')
-        str_query = "SELECT F.id, F.approved_hour, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
-        query_ots = WorkLog.objects.raw(str_query)
-
-        for q in query_ots:
-            if q.checkout_time is not None and q.checkin_time is not None:
-                modetime = datetime.timedelta(hours=17)
-                holiday_modetime = datetime.timedelta(hours=8)
-
-                t_out = q.checkout_time
-                t_in = q.checkin_time
-                if q.checkout_time.date() > q.checkin_time.date():
-                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute,
-                                                  seconds=t_out.second) + datetime.timedelta(hours=24)
-                else:
-                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute, seconds=t_out.second)
-
-                timestart = datetime.timedelta(hours=t_in.hour, minutes=t_in.minute, seconds=t_in.second)
-
-                check_weekday = q.checkin_time.weekday()
-                check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
-
-                q.firsthr = 0
-                q.meal_allowance = 0
-                q.secondhr = 0
-                q.ph = 0
-
-                # For holiday
-                if check_holiday == True:
-                    q.ph += 1
-
-                # For Sunday
-                if check_weekday == 6:
-                    # over 5:00 pm
-                    if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds() // 60
-                        mins = min_check // 15
-                        # over 5 hours of overtime allow meals.
-
-                        if mins >= 20:
-                            q.firsthr += mins * 0.25 - 0.5
-                            q.meal_allowance += 1
-                        # under 5 hours of overtime just consider 1.5HR
-                        else:
-                            q.firsthr += mins * 0.25
-
-                        # For the 2.0HR part of over 5:00 pm
-                        if modetime > timestart:
-                            hr2_min_check = (modetime - timestart).total_seconds() // 60
-                            hr2_mins = hr2_min_check // 15
-                            if hr2_mins > 16:
-                                q.secondhr += hr2_mins * 0.25 - 1
-                            else:
-                                q.secondhr += hr2_mins * 0.25
-                    else:
-                        ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
-                        ph_mins = ph_min_check // 15
-                        if ph_mins >= 24:
-                            q.secondhr += (ph_mins * 0.25 - 1)
-                        else:
-                            q.secondhr += (ph_mins * 0.25)
-                # For normal days (Mon ~ Sat)
-                else:
-                    if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds() // 60
-                        mins = min_check // 15
-                        if mins >= 20:
-                            q.firsthr += (mins * 0.25 - 0.5)
-                            q.meal_allowance += 1
-                        else:
-                            q.firsthr += (mins * 0.25)
-
-        return render(request, 'accounts/ajax-otcalculation.html', {'otcalculations': query_ots})
 
 
 @ajax_login_required

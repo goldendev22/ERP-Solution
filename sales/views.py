@@ -759,9 +759,14 @@ class QuotationDetailView(DetailView):
             data.append(managers)
         data.extend(User.objects.select_related('privilege'))
         context['salepersons'] = data
-        context['scope_list'] = Scope.objects.filter(quotation_id=content_pk, parent=None)
+        # context['scope_list'] = Scope.objects.filter(quotation_id=content_pk, parent=None)
+        scopes = Scope.objects.filter(quotation_id=content_pk, parent=None)
         if Scope.objects.filter(quotation_id=content_pk, parent=None).exists():
             subtotal = Scope.objects.filter(quotation_id=content_pk, parent=None).aggregate(Sum('amount'))['amount__sum']
+            for scope in scopes:
+                scope.allocation_perc = 100*scope.amount/subtotal
+                scope.save()
+            context['scope_list']=scopes
             gst = float(subtotal) * 0.07
             context['subtotal'] = subtotal
             context['gst'] = gst
