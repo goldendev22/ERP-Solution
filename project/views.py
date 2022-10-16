@@ -2133,7 +2133,8 @@ def subitemadd(request):
         description = request.POST.get('description')
         uom = request.POST.get('uom')
         qty = request.POST.get('qty')
-        allocation_perc = request.POST.get('allocation')
+        # allocation_perc = request.POST.get('allocation')
+        allocation_perc = 100
         quotationid = request.POST.get('quotationid')
         itemid = request.POST.get('itemid')
         Scope.objects.create(
@@ -2144,11 +2145,11 @@ def subitemadd(request):
             quotation_id=quotationid,
             parent_id=itemid,
         )
-        #parent allocation_perc update
-        parent = Scope.objects.get(id=itemid)
-        allocation_sum = Scope.objects.filter(parent_id=itemid).aggregate(Sum('allocation_perc'))['allocation_perc__sum']
-        parent.allocation_perc = allocation_sum
-        parent.save()
+        # #parent allocation_perc update
+        # parent = Scope.objects.get(id=itemid)
+        # allocation_sum = Scope.objects.filter(parent_id=itemid).aggregate(Sum('allocation_perc'))['allocation_perc__sum']
+        # parent.allocation_perc = allocation_sum
+        # parent.save()
         
         return JsonResponse({
             "status": "Success",
