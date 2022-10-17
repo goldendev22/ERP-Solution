@@ -516,7 +516,7 @@ def maindeviceadd(request):
         hardware_code = request.POST.get('hardware_code')
         hardware_desc = request.POST.get('hardware_desc')
         serial_number = request.POST.get('serial_number')
-        uom = request.POST.get('uom')
+        uom_id = request.POST.get('uom')
         expiry_date = request.POST.get('expiry_date')
         licensing_date = request.POST.get('licensing_date')
         if licensing_date:
@@ -535,7 +535,7 @@ def maindeviceadd(request):
                     hardware_code=hardware_code,
                     hardware_desc=hardware_desc,
                     serial_number=serial_number,
-                    uom=uom,
+                    uom=Uom.objects.get(id=uom_id),
                     expiry_date=expiry_date,
                     licensing_date=licensing,
                     remark=remark,
@@ -560,7 +560,7 @@ def maindeviceadd(request):
                 device.hardware_code=hardware_code
                 device.hardware_desc = hardware_desc
                 device.serial_number = serial_number
-                device.uom = uom
+                device.uom = Uom.objects.get(id=uom_id)
                 device.supplier_name = supplier
                 device.expiry_date=expiry_date
                 device.licensing_date=licensing
@@ -596,7 +596,7 @@ def getDevice(request):
                 'expiry_date': device.expiry_date.strftime('%d %b, %Y'),
                 'licensing_date': device.licensing_date.strftime('%d %b, %Y'),
                 'remark': device.remark,
-                'uom': device.uom,
+                'uom': device.uom.id,
                 'brand': device.brand,
                 'supplier': device.supplier_name
 
@@ -610,7 +610,7 @@ def getDevice(request):
                 'expiry_date': device.expiry_date.strftime('%d %b, %Y'),
                 'licensing_date': '',
                 'remark': device.remark,
-                'uom': device.uom,
+                'uom': device.uom.id,
                 'brand': device.brand,
                 'supplier': device.supplier_name
 

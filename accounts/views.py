@@ -1113,11 +1113,14 @@ def ajax_otcalculation_filter(request):
     if request.method == "POST":
         checkin_time = request.POST.get('checkin_time')
         checkout_time = request.POST.get('checkout_time')
-        str_query = "SELECT F.id, F.approved_hour, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+        # str_query = "SELECT F.id, F.approved_hour, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
 
-        # str_query = "SELECT F.id, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id,W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+        str_query = "SELECT F.id, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id,W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
         query_ots = WorkLog.objects.raw(str_query)
-
+        # holiday_cnt = Holiday.objects.filter(date__range=[datetime.datetime.strptime(checkin_time, '%Y-%m-%d %H:%M').date(),
+        #                                                     datetime.datetime.strptime(checkout_time,
+        #                                                                       '%Y-%m-%d %H:%M').date()]).count()
+        # print("----holiday count----", holiday_cnt)
         for q in query_ots:
             if q.checkout_time is not None and q.checkin_time is not None:
                 modetime = datetime.timedelta(hours=17)
@@ -1192,13 +1195,17 @@ def ajax_otcalculation_filter(request):
 @ajax_login_required
 def ajax_otcalculation_summary(request):
     if request.method == "POST":
+        current_year = datetime.datetime.today().year
+        current_month = datetime.datetime.today().month
+        holiday_cnt = Holiday.objects.filter(date__year=current_year, date__month=current_month).count()
+
         str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.approved_hour, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F, tb_user AS U WHERE F.emp_no = U.empid ORDER BY F.checkin_time ASC"
+
 
         query_ots = WorkLog.objects.raw(str_query)
         for q in query_ots:
             if q.checkout_time is not None and q.checkin_time is not None:
                 modetime = datetime.timedelta(hours=17)
-                holiday_modetime = datetime.timedelta(hours=8)
 
                 t_out = q.checkout_time
                 t_in = q.checkin_time
@@ -1211,16 +1218,11 @@ def ajax_otcalculation_summary(request):
                 timestart = datetime.timedelta(hours=t_in.hour, minutes=t_in.minute, seconds=t_in.second)
 
                 check_weekday = q.checkin_time.weekday()
-                check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
 
                 q.firsthr = 0
                 q.meal_allowance = 0
                 q.secondhr = 0
-                q.ph = 0
-
-                # For holiday
-                if check_holiday == True:
-                    q.ph += 1
+                q.ph = holiday_cnt
 
                 # For Sunday
                 if check_weekday == 6:
@@ -1274,7 +1276,7 @@ def ajax_otcalculation_summary(request):
         for empd in empdata:
             summary_firsthr = 0
             summary_secondhr = 0
-            summary_ph = 0
+            summary_ph = holiday_cnt
             summary_meal = 0
             total_working_days = 0
             temp_checkin_date = None
@@ -1285,11 +1287,9 @@ def ajax_otcalculation_summary(request):
                     if temp_checkin_date is None:
                         temp_checkin_date = query_ot.checkin_time.date()
                         total_working_days += 1
-                        summary_ph += query_ot.ph
                     if temp_checkin_date != query_ot.checkin_time.date():
                         temp_checkin_date = query_ot.checkin_time.date()
                         total_working_days += 1
-                        summary_ph += query_ot.ph
 
                     s_firstht = min(float(query_ot.approved_hour), float(query_ot.firsthr))
                     s_secondht = min(float(query_ot.approved_hour), float(query_ot.secondhr))
@@ -1313,7 +1313,14 @@ def ajax_otcalculation_filter_summary(request):
     if request.method == "POST":
         checkin_time = request.POST.get('checkin_time')
         checkout_time = request.POST.get('checkout_time')
-        str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.approved_hour, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F, tb_user AS U WHERE F.emp_no = U.empid" + " AND F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+        # str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.approved_hour, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F, tb_user AS U WHERE F.emp_no = U.empid" + " AND F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+
+        str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W) AS F, tb_user AS U WHERE F.emp_no = U.empid" + " AND F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+        holiday_cnt = Holiday.objects.filter(date__range=[datetime.datetime.strptime(checkin_time, '%Y-%m-%d').date(),
+                                                            datetime.datetime.strptime(checkout_time,
+                                                                              '%Y-%m-%d').date()]).count()
+        # print("----holiday count----", holiday_cnt)
+
         query_ots = WorkLog.objects.raw(str_query)
         for q in query_ots:
             if q.checkout_time is not None and q.checkin_time is not None:
@@ -1331,16 +1338,10 @@ def ajax_otcalculation_filter_summary(request):
                 timestart = datetime.timedelta(hours=t_in.hour, minutes=t_in.minute, seconds=t_in.second)
 
                 check_weekday = q.checkin_time.weekday()
-                check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
-
                 q.firsthr = 0
                 q.meal_allowance = 0
                 q.secondhr = 0
-                q.ph = 0
-
-                # For holiday
-                if check_holiday == True:
-                    q.ph += 1
+                q.ph = holiday_cnt
 
                 # For Sunday
                 if check_weekday == 6:
@@ -1394,7 +1395,7 @@ def ajax_otcalculation_filter_summary(request):
         for empd in empdata:
             summary_firsthr = 0
             summary_secondhr = 0
-            summary_ph = 0
+            summary_ph = q.ph
             summary_meal = 0
             total_working_days = 0
             temp_checkin_date = None
@@ -1405,11 +1406,9 @@ def ajax_otcalculation_filter_summary(request):
                     if temp_checkin_date is None:
                         temp_checkin_date = query_ot.checkin_time.date()
                         total_working_days += 1
-                        summary_ph += query_ot.ph
                     if temp_checkin_date != query_ot.checkin_time.date():
                         temp_checkin_date = query_ot.checkin_time.date()
                         total_working_days += 1
-                        summary_ph += query_ot.ph
 
                     s_firstht = min(float(query_ot.approved_hour), float(query_ot.firsthr))
                     s_secondht = min(float(query_ot.approved_hour), float(query_ot.secondhr))
