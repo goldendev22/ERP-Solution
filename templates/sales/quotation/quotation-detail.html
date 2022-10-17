@@ -434,22 +434,20 @@
                                             <td class="align-middle">{{scope.uom|default_if_none:""}}</td>
                                             <td class="align-middle">{{scope.unitprice|default_if_none:""}}</td>
                                             <td class="align-middle">{{scope.amount|default_if_none:"--"}}</td>
-                                            <td class="align-middle">{{scope.allocation_perc|floatformat:2|default_if_none:"--"}} %</td>
-<!--                                            <td class="align-middle">-->
-<!--                                                {% if quotation.flag %}-->
-<!--                                                {% if quotation.qtt_status == "Open" %}-->
-<!--                                                -->
-<!--                                                <a href="javascript:void(0);" onclick="updatescope('{{scope.id}}')" class="btn btn-outline-primary btn-sm edit" title="Edit">-->
-<!--                                                    <i class="fas fa-pencil-alt"></i>-->
-<!--                                                </a>-->
-<!--                                                -->
-<!--                                                -->
-<!--                                                <a href="javascript:void(0);" onclick="deletescope('{{scope.id}}')" class="btn btn-outline-danger btn-sm delete" title="Delete">-->
-<!--                                                    <i class="far fa-trash-alt"></i>-->
-<!--                                                </a>-->
-<!--                                                {% endif %}-->
-<!--                                                {% endif %}-->
-<!--                                            </td>-->
+<!--                                            <td class="align-middle">{{scope.allocation_perc|floatformat:2|default_if_none:"&#45;&#45;"}} %</td>-->
+                                            <td class="align-middle">
+                                                {% if quotation.flag %}
+                                                {% if quotation.qtt_status == "Open" %}
+
+                                                <a href="javascript:void(0);" onclick="updatescope('{{scope.id}}')" class="btn btn-outline-primary btn-sm edit" title="Edit">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </a>
+                                                <a href="javascript:void(0);" onclick="deletescope('{{scope.id}}')" class="btn btn-outline-danger btn-sm delete" title="Delete">
+                                                    <i class="far fa-trash-alt"></i>
+                                                </a>
+                                                {% endif %}
+                                                {% endif %}
+                                            </td>
                                         </tr>
                                     {% endfor %}
                                     {% if scope_list %}
