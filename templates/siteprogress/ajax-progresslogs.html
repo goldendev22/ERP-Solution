@@ -21,7 +21,7 @@
                 <td class="align-middle">{{progresslog.uom|default_if_none:""}}</td>
                 <td class="align-middle">{{progresslog.allocation_perc|default_if_none:""}}</td>
                 <td class="align-middle">{{progresslog.cumulativeqty|default_if_none:""}}</td>
-                <td class="align-middle">{{progresslog.cumulativeperc|default_if_none:""}} %</td>
+                <td class="align-middle">{{progresslog.cumulativeperc|floatformat:2|default_if_none:""}} %</td>
             </tr>
         </tbody>
         

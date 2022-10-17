@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.generic.list import ListView
 from accounts.models import Uom
 from sales.models import Quotation, Scope
-from siteprogress.models import SiteProgress
+from siteprogress.models import SiteProgress, ProgressLog
 from project.models import Project
 from sales.decorater import ajax_login_required
 from django.db import IntegrityError
@@ -51,7 +51,7 @@ def overViewFilterList(request):
 @ajax_login_required
 def progressLogList(request):
     if request.method == "POST":
-        #progresslogs = ProgressLog.objects.all()
+        # progresslogs = ProgressLog.objects.all()
         progresslogs = []
         return render(request, 'siteprogress/ajax-progresslogs.html', {'progresslogs': progresslogs})
 
@@ -65,11 +65,14 @@ def progressLogFilterList(request):
         for obj in projectitems:
             obj.childs = Scope.objects.filter(quotation_id=quotation.id, parent_id=obj.id)
             obj.cumulativeqty = SiteProgress.objects.filter(project_id=proj_id,description__iexact=obj.description).aggregate(Sum('qty'))['qty__sum']
-            if obj.allocation_perc and obj.cumulativeqty:
-                obj.cumulativeperc = float(obj.cumulativeqty / obj.qty) * float(obj.allocation_perc)
-            else:
-                obj.cumulativeperc = 0
-            
+            # if obj.allocation_perc and obj.cumulativeqty:
+            #     obj.cumulativeperc = float(obj.cumulativeqty / obj.qty) * float(obj.allocation_perc)
+            # else:
+            #     obj.cumulativeperc = 0
+            obj.cumulativeperc = 0
+            if obj.childs.count() != 0:
+                tempObjperc = float(obj.allocation_perc) / obj.childs.count()
+
             for subobj in obj.childs:
                 
                 subobj.cumulativeqty = SiteProgress.objects.filter(project_id=proj_id,description__iexact=subobj.description).aggregate(Sum('qty'))['qty__sum']
@@ -77,6 +80,8 @@ def progressLogFilterList(request):
                     subobj.cumulativeperc = float(subobj.cumulativeqty / subobj.qty) * float(subobj.allocation_perc)
                 else:
                     subobj.cumulativeperc = 0
+
+                obj.cumulativeperc += tempObjperc * subobj.cumulativeperc / 100
 
         return render(request, 'siteprogress/ajax-progresslogs.html', {'progresslogs': projectitems})
 

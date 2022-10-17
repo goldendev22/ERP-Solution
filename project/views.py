@@ -6,7 +6,8 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.generic.list import ListView
-from project.models import DOSignature, DoItem, PCSignature, Pc, PcItem, Project, OT, Do, Bom, BomLog, ProjectFile, SRSignature, Sr, SrItem, Team
+from project.models import DOSignature, DoItem, PCSignature, Pc, PcItem, Project, OT, Do, Bom, BomLog, ProjectFile, \
+    SRSignature, Sr, SrItem, Team
 from accounts.models import Uom, User
 from sales.decorater import ajax_login_required
 from django.db import IntegrityError
@@ -19,7 +20,8 @@ import datetime
 import pytz
 import decimal
 import requests
-from project.resources import BomResource, DoItemResource, ProjectResource, SrItemResource, TeamResource, ProjectOtResource
+from project.resources import BomResource, DoItemResource, ProjectResource, SrItemResource, TeamResource, \
+    ProjectOtResource
 from accounts.models import Holiday, WorkLog
 import os
 from sales.models import Company, Contact, Quotation, Scope
@@ -38,6 +40,8 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from io import BytesIO
 from reportlab.lib.pagesizes import A4, landscape, portrait
 from django.core.files.base import ContentFile
+
+
 # Create your views here.
 
 @method_decorator(login_required, name='dispatch')
@@ -49,7 +53,8 @@ class ProjectSummaryView(ListView):
         context = super().get_context_data(**kwargs)
         context['contacts'] = User.objects.all()
         context['customers'] = Project.objects.all().order_by('company_name').values('company_name').distinct()
-        context['proj_incharges'] = Project.objects.exclude(proj_incharge=None).order_by('proj_incharge').values('proj_incharge').distinct()
+        context['proj_incharges'] = Project.objects.exclude(proj_incharge=None).order_by('proj_incharge').values(
+            'proj_incharge').distinct()
         context['proj_nos'] = Project.objects.all().order_by('proj_id').values('proj_id').distinct()
         context['date_years'] = list(set([d.start_date.year for d in Project.objects.all()]))
 
@@ -60,12 +65,14 @@ class ProjectSummaryView(ListView):
             context['exist_current_year'] = False
         return context
 
+
 def ajax_export_project(request):
     resource = ProjectResource()
     dataset = resource.export()
     response = HttpResponse(dataset.csv, content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="project-summary.csv"'
     return response
+
 
 def ajax_export_projectot(request):
     resource = ProjectOtResource()
@@ -74,27 +81,28 @@ def ajax_export_projectot(request):
     response['Content-Disposition'] = 'attachment; filename="project-ot.csv"'
     return response
 
+
 def ajax_import_project(request):
-    
     if request.method == 'POST':
-        org_column_names = ['proj_id', 'company_name', 'proj_name', 'start_date', 'end_date', 'proj_incharge', 'proj_status']
-        
+        org_column_names = ['proj_id', 'company_name', 'proj_name', 'start_date', 'end_date', 'proj_incharge',
+                            'proj_status']
+
         csv_file = request.FILES['file']
         contents = csv_file.read().decode('UTF-8')
         path = "temp.csv"
-        f = open(path,'w')
+        f = open(path, 'w')
         f.write(contents)
         f.close()
 
-        df = pd.read_csv(path)    
+        df = pd.read_csv(path)
         df.fillna("", inplace=True)
         column_names = list(df)
 
         if len(column_names) == 1:
-            df = pd.read_csv(path, delimiter = ';', decimal = ',', encoding = 'utf-8')    
+            df = pd.read_csv(path, delimiter=';', decimal=',', encoding='utf-8')
             df.fillna("", inplace=True)
             column_names = list(df)
-        
+
         dif_len = len(list(set(org_column_names) - set(column_names)))
 
         if dif_len == 0:
@@ -110,8 +118,9 @@ def ajax_import_project(request):
                             proj_id=row["proj_id"],
                             company_name=row["company_name"],
                             proj_name=row["proj_name"],
-                            start_date=datetime.datetime.strptime(row["start_date"],'%Y-%m-%d').replace(tzinfo=pytz.utc), 
-                            end_date=datetime.datetime.strptime(row["end_date"],'%Y-%m-%d').replace(tzinfo=pytz.utc), 
+                            start_date=datetime.datetime.strptime(row["start_date"], '%Y-%m-%d').replace(
+                                tzinfo=pytz.utc),
+                            end_date=datetime.datetime.strptime(row["end_date"], '%Y-%m-%d').replace(tzinfo=pytz.utc),
                             proj_incharge=row["proj_incharge"],
                             proj_status=row["proj_status"],
                         )
@@ -125,46 +134,49 @@ def ajax_import_project(request):
                         project = Project.objects.filter(proj_id=row["proj_id"])[0]
                         project.proj_id = row["proj_id"]
                         project.company_name = row["company_name"]
-                        project.proj_name=row["proj_name"]
-                        project.start_date=datetime.datetime.strptime(row["start_date"],'%Y-%m-%d').replace(tzinfo=pytz.utc)
-                        project.end_date=datetime.datetime.strptime(row["end_date"],'%Y-%m-%d').replace(tzinfo=pytz.utc)
-                        project.proj_incharge=row["proj_incharge"]
-                        project.proj_status=row["proj_status"]
-                        
+                        project.proj_name = row["proj_name"]
+                        project.start_date = datetime.datetime.strptime(row["start_date"], '%Y-%m-%d').replace(
+                            tzinfo=pytz.utc)
+                        project.end_date = datetime.datetime.strptime(row["end_date"], '%Y-%m-%d').replace(
+                            tzinfo=pytz.utc)
+                        project.proj_incharge = row["proj_incharge"]
+                        project.proj_status = row["proj_status"]
+
                         project.save()
                         exist_record += 1
                     except Exception as e:
                         print(e)
                         failed_record += 1
             os.remove(path)
-            return JsonResponse({'status':'true','error_code':'0', 'total': record_count, 'success': success_record, 'failed': failed_record, 'exist': exist_record})
+            return JsonResponse({'status': 'true', 'error_code': '0', 'total': record_count, 'success': success_record,
+                                 'failed': failed_record, 'exist': exist_record})
         else:
             os.remove(path)
             # column count is not equals
-            return JsonResponse({'status':'false','error_code':'1'})
+            return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
 
+
 def ajax_import_projectot(request):
-    
     if request.method == 'POST':
         org_column_names = ['proj_id', 'date', 'approved_hour', 'approved_by', 'proj_name']
-        
+
         csv_file = request.FILES['file']
         contents = csv_file.read().decode('UTF-8')
         path = "temp.csv"
-        f = open(path,'w')
+        f = open(path, 'w')
         f.write(contents)
         f.close()
 
-        df = pd.read_csv(path)    
+        df = pd.read_csv(path)
         df.fillna("", inplace=True)
         column_names = list(df)
 
         if len(column_names) == 1:
-            df = pd.read_csv(path, delimiter = ';', decimal = ',', encoding = 'utf-8')    
+            df = pd.read_csv(path, delimiter=';', decimal=',', encoding='utf-8')
             df.fillna("", inplace=True)
             column_names = list(df)
-        
+
         dif_len = len(list(set(org_column_names) - set(column_names)))
 
         if dif_len == 0:
@@ -180,7 +192,7 @@ def ajax_import_projectot(request):
                             proj_id=row["proj_id"],
                             approved_hour=row["approved_hour"],
                             proj_name=row["proj_name"],
-                            date=datetime.datetime.strptime(row["date"],'%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc), 
+                            date=datetime.datetime.strptime(row["date"], '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc),
                             approved_by=row["approved_by"]
                         )
                         projectot.save()
@@ -193,22 +205,25 @@ def ajax_import_projectot(request):
                         projectot = OT.objects.filter(proj_id=row["proj_id"])[0]
                         projectot.proj_id = row["proj_id"]
                         projectot.approved_hour = row["approved_hour"]
-                        projectot.proj_name=row["proj_name"]
-                        projectot.start_date=datetime.datetime.strptime(row["date"],'%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.utc)
-                        projectot.approved_by=row["approved_by"]
-                        
+                        projectot.proj_name = row["proj_name"]
+                        projectot.start_date = datetime.datetime.strptime(row["date"], '%Y-%m-%d %H:%M:%S').replace(
+                            tzinfo=pytz.utc)
+                        projectot.approved_by = row["approved_by"]
+
                         projectot.save()
                         exist_record += 1
                     except Exception as e:
                         print(e)
                         failed_record += 1
             os.remove(path)
-            return JsonResponse({'status':'true','error_code':'0', 'total': record_count, 'success': success_record, 'failed': failed_record, 'exist': exist_record})
+            return JsonResponse({'status': 'true', 'error_code': '0', 'total': record_count, 'success': success_record,
+                                 'failed': failed_record, 'exist': exist_record})
         else:
             os.remove(path)
             # column count is not equals
-            return JsonResponse({'status':'false','error_code':'1'})
+            return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
+
 
 @ajax_login_required
 def ajax_summarys(request):
@@ -217,6 +232,7 @@ def ajax_summarys(request):
         projects = Project.objects.filter(start_date__iso_year=current_year)
 
         return render(request, 'projects/ajax-project.html', {'projects': projects})
+
 
 @ajax_login_required
 def ajax_summarys_filter(request):
@@ -230,22 +246,33 @@ def ajax_summarys_filter(request):
                 projects = Project.objects.filter(proj_id__iexact=search_projectno, start_date__iso_year=search_year)
 
             elif search_projectno != "" and incharge_filter != "" and search_customer == "":
-                projects = Project.objects.filter(proj_id__iexact=search_projectno, proj_incharge__iexact=incharge_filter, start_date__iso_year=search_year)
-            
+                projects = Project.objects.filter(proj_id__iexact=search_projectno,
+                                                  proj_incharge__iexact=incharge_filter,
+                                                  start_date__iso_year=search_year)
+
             elif search_projectno != "" and incharge_filter != "" and search_customer != "":
-                projects = Project.objects.filter(proj_id__iexact=search_projectno, proj_incharge__iexact=incharge_filter, company_name__iexact=search_customer,start_date__iso_year=search_year)
+                projects = Project.objects.filter(proj_id__iexact=search_projectno,
+                                                  proj_incharge__iexact=incharge_filter,
+                                                  company_name__iexact=search_customer,
+                                                  start_date__iso_year=search_year)
 
             elif search_projectno == "" and incharge_filter != "" and search_customer == "":
-                projects = Project.objects.filter(proj_incharge__iexact=incharge_filter,start_date__iso_year=search_year)
+                projects = Project.objects.filter(proj_incharge__iexact=incharge_filter,
+                                                  start_date__iso_year=search_year)
 
             elif search_projectno == "" and incharge_filter != "" and search_customer != "":
-                projects = Project.objects.filter(proj_incharge__iexact=incharge_filter, company_name__iexact=search_customer,start_date__iso_year=search_year)
+                projects = Project.objects.filter(proj_incharge__iexact=incharge_filter,
+                                                  company_name__iexact=search_customer,
+                                                  start_date__iso_year=search_year)
 
             elif search_projectno == "" and incharge_filter == "" and search_customer != "":
-                projects = Project.objects.filter(company_name__iexact=search_customer,start_date__iso_year=search_year)
+                projects = Project.objects.filter(company_name__iexact=search_customer,
+                                                  start_date__iso_year=search_year)
 
             elif search_projectno != "" and incharge_filter == "" and search_customer != "":
-                projects = Project.objects.filter(proj_id__iexact=search_projectno,company_name__iexact=search_customer,start_date__iso_year=search_year)
+                projects = Project.objects.filter(proj_id__iexact=search_projectno,
+                                                  company_name__iexact=search_customer,
+                                                  start_date__iso_year=search_year)
 
             elif search_projectno == "" and incharge_filter == "" and search_customer == "":
                 projects = Project.objects.filter(start_date__iso_year=search_year)
@@ -254,23 +281,29 @@ def ajax_summarys_filter(request):
                 projects = Project.objects.filter(proj_id__iexact=search_projectno)
 
             elif search_projectno != "" and incharge_filter != "" and search_customer == "":
-                projects = Project.objects.filter(proj_id__iexact=search_projectno, proj_incharge__iexact=incharge_filter)
-            
+                projects = Project.objects.filter(proj_id__iexact=search_projectno,
+                                                  proj_incharge__iexact=incharge_filter)
+
             elif search_projectno != "" and incharge_filter != "" and search_customer != "":
-                projects = Project.objects.filter(proj_id__iexact=search_projectno, proj_incharge__iexact=incharge_filter, company_name__iexact=search_customer)
+                projects = Project.objects.filter(proj_id__iexact=search_projectno,
+                                                  proj_incharge__iexact=incharge_filter,
+                                                  company_name__iexact=search_customer)
 
             elif search_projectno == "" and incharge_filter != "" and search_customer == "":
                 projects = Project.objects.filter(proj_incharge__iexact=incharge_filter)
 
             elif search_projectno == "" and incharge_filter != "" and search_customer != "":
-                projects = Project.objects.filter(proj_incharge__iexact=incharge_filter, company_name__iexact=search_customer)
+                projects = Project.objects.filter(proj_incharge__iexact=incharge_filter,
+                                                  company_name__iexact=search_customer)
 
             elif search_projectno == "" and incharge_filter == "" and search_customer != "":
                 projects = Project.objects.filter(company_name__iexact=search_customer)
 
             elif search_projectno != "" and incharge_filter == "" and search_customer != "":
-                projects = Project.objects.filter(proj_id__iexact=search_projectno,company_name__iexact=search_customer)
+                projects = Project.objects.filter(proj_id__iexact=search_projectno,
+                                                  company_name__iexact=search_customer)
         return render(request, 'projects/ajax-project.html', {'projects': projects})
+
 
 @ajax_login_required
 def summaryadd(request):
@@ -280,7 +313,7 @@ def summaryadd(request):
         end_date = request.POST.get('end_date')
         customer = request.POST.get('customer')
         project = request.POST.get('project')
-        
+
         summaryid = request.POST.get('summaryid')
         if summaryid == "-1":
             try:
@@ -292,12 +325,11 @@ def summaryadd(request):
                     proj_name=project
                 )
 
-                
                 return JsonResponse({
                     "status": "Success",
                     "messages": "Summary information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Project is existed!"
@@ -309,7 +341,7 @@ def summaryadd(request):
                 summary.start_date = start_date
                 summary.end_date = end_date
                 summary.company_name = customer
-                summary.proj_name=project
+                summary.proj_name = project
                 summary.save()
 
                 return JsonResponse({
@@ -317,11 +349,12 @@ def summaryadd(request):
                     "messages": "Summary information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Project is existed!"
                 })
+
 
 @method_decorator(login_required, name='dispatch')
 class ProjectOTView(ListView):
@@ -331,17 +364,21 @@ class ProjectOTView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['projectots'] = OT.objects.all()
-        context['approved_users'] = User.objects.filter(Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
+        context['approved_users'] = User.objects.filter(
+            Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
         context['approveds'] = self.request.user.username
 
         context['projectot_nos'] = OT.objects.exclude(proj_id=None).order_by('proj_id').values('proj_id').distinct()
-        context['proj_nos'] = Project.objects.filter(proj_status="On-going").order_by('proj_id').values('proj_id').distinct()
+        context['proj_nos'] = Project.objects.filter(proj_status="On-going").order_by('proj_id').values(
+            'proj_id').distinct()
         return context
+
 
 @method_decorator(login_required, name='dispatch')
 class approvedOTView(ListView):
     model = OT
     template_name = "projects/approved-ot.html"
+
 
 @ajax_login_required
 def ajax_get_projectname(request):
@@ -360,6 +397,8 @@ def ajax_get_projectname(request):
                 "status": "not exist",
             }
             return JsonResponse(data)
+
+
 # @ajax_login_required
 # def check_ot_number(request):
 #     if request.method == "POST":
@@ -369,13 +408,13 @@ def ajax_get_projectname(request):
 #                 "status": "exist",
 #                 "ot_id": ot.ot_id
 #             }
-        
+
 #             return JsonResponse(data)
 #         else:
 #             data = {
 #                 "status": "no exist"
 #             }
-        
+
 #             return JsonResponse(data)
 
 @ajax_login_required
@@ -387,13 +426,14 @@ def ajax_projectots(request):
 
         return render(request, 'projects/ajax-projectot.html', {'projectots': projectots})
 
+
 @ajax_login_required
 def ajax_projectots_filter(request):
     if request.method == "POST":
         search_projectno = request.POST.get('search_projectno')
         daterange = request.POST.get('daterange')
         if daterange:
-            startdate = datetime.datetime.strptime(daterange.split()[0],'%Y.%m.%d').replace(tzinfo=pytz.utc)
+            startdate = datetime.datetime.strptime(daterange.split()[0], '%Y.%m.%d').replace(tzinfo=pytz.utc)
             enddate = datetime.datetime.strptime(daterange.split()[2], '%Y.%m.%d').replace(tzinfo=pytz.utc)
         search_approved = request.POST.get('search_approved')
         if search_projectno != "" and daterange == "" and search_approved == "":
@@ -401,9 +441,10 @@ def ajax_projectots_filter(request):
 
         elif search_projectno != "" and daterange != "" and search_approved == "":
             projectots = OT.objects.filter(proj_id__iexact=search_projectno, date__gte=startdate, date__lte=enddate)
-        
+
         elif search_projectno != "" and daterange != "" and search_approved != "":
-            projectots = OT.objects.filter(proj_id__iexact=search_projectno, date__gte=startdate, date__lte=enddate, approved_by__iexact=search_approved)
+            projectots = OT.objects.filter(proj_id__iexact=search_projectno, date__gte=startdate, date__lte=enddate,
+                                           approved_by__iexact=search_approved)
 
         elif search_projectno == "" and daterange != "" and search_approved == "":
             projectots = OT.objects.filter(date__gte=startdate, date__lte=enddate)
@@ -415,7 +456,7 @@ def ajax_projectots_filter(request):
             projectots = OT.objects.filter(approved_by__iexact=search_approved)
 
         elif search_projectno != "" and daterange == "" and search_approved != "":
-            projectots = OT.objects.filter(proj_id__iexact=search_projectno,approved_by__iexact=search_approved)
+            projectots = OT.objects.filter(proj_id__iexact=search_projectno, approved_by__iexact=search_approved)
 
         return render(request, 'projects/ajax-projectot.html', {'projectots': projectots})
 
@@ -435,18 +476,19 @@ def getProjectSummary(request):
             }
         else:
             data = {
-            'proj_id': summary.proj_id,
-            'start_date': summary.start_date.strftime('%d %b, %Y'),
-            'end_date': "",
-            'customer': str(summary.company_name),
-            'proj_name': summary.proj_name
-        }
+                'proj_id': summary.proj_id,
+                'start_date': summary.start_date.strftime('%d %b, %Y'),
+                'end_date': "",
+                'customer': str(summary.company_name),
+                'proj_name': summary.proj_name
+            }
         return JsonResponse(json.dumps(data), safe=False)
+
 
 @method_decorator(login_required, name='dispatch')
 class ProjectDetailView(DetailView):
     model = Project
-    template_name="projects/project-detail.html"
+    template_name = "projects/project-detail.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -458,7 +500,8 @@ class ProjectDetailView(DetailView):
         context['contacts'] = Contact.objects.all()
         context['contact_users'] = User.objects.all()
         context['uoms'] = Uom.objects.all()
-        context['projects_incharge'] = User.objects.filter(Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
+        context['projects_incharge'] = User.objects.filter(
+            Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
         context['dolist'] = Do.objects.filter(project_id=content_pk)
         context['filelist'] = ProjectFile.objects.filter(project_id=content_pk)
         context['bomlist'] = Bom.objects.filter(project_id=content_pk)
@@ -466,30 +509,46 @@ class ProjectDetailView(DetailView):
         context['srlist'] = Sr.objects.filter(project_id=content_pk)
         context['pclist'] = Pc.objects.filter(project_id=content_pk)
         quotation = summary.quotation
-        projectitems = Scope.objects.filter(quotation_id=quotation.id,parent=None)       
+        projectitems = Scope.objects.filter(quotation_id=quotation.id, parent=None)
+        subtotal = 0
         for obj in projectitems:
             obj.childs = Scope.objects.filter(quotation_id=quotation.id, parent_id=obj.id)
-            obj.cumulativeqty = SiteProgress.objects.filter(project_id=content_pk,description__iexact=obj.description).aggregate(Sum('qty'))['qty__sum']
-            if obj.allocation_perc and obj.cumulativeqty:
-                obj.cumulativeperc = float(obj.cumulativeqty / obj.qty) * float(obj.allocation_perc)
-            else:
-                obj.cumulativeperc = 0
+            obj.cumulativeqty = \
+                SiteProgress.objects.filter(project_id=content_pk, description__iexact=obj.description).aggregate(
+                    Sum('qty'))['qty__sum']
+
+            # if obj.allocation_perc and obj.cumulativeqty:
+            #     obj.cumulativeperc = float(obj.cumulativeqty / obj.qty) * float(obj.allocation_perc)
+            # else:
+            #     obj.cumulativeperc = 0
+            # obj.cumulativeqty = 0
+            obj.cumulativeperc = 0
+            if obj.childs.count()!=0:
+                tempObjperc = float(obj.allocation_perc) / obj.childs.count()
             for subobj in obj.childs:
-                
-                subobj.cumulativeqty = SiteProgress.objects.filter(project_id=content_pk,description__iexact=subobj.description).aggregate(Sum('qty'))['qty__sum']
+                subobj.cumulativeqty = \
+                    SiteProgress.objects.filter(project_id=content_pk,
+                                                description__iexact=subobj.description).aggregate(
+                        Sum('qty'))['qty__sum']
+
                 if subobj.allocation_perc and subobj.cumulativeqty:
                     subobj.cumulativeperc = float(subobj.cumulativeqty / subobj.qty) * float(subobj.allocation_perc)
                 else:
                     subobj.cumulativeperc = 0
+                obj.cumulativeperc += tempObjperc * subobj.cumulativeperc/100
 
-        subtotal = 0
-        for allobj in Scope.objects.filter(quotation_id=quotation.id):
-            allobj.cumulativeqty = SiteProgress.objects.filter(project_id=content_pk,description__iexact=allobj.description).aggregate(Sum('qty'))['qty__sum']
-            if allobj.allocation_perc and allobj.cumulativeqty:
-                allobj.cumulativeperc = float(allobj.cumulativeqty / allobj.qty) * float(allobj.allocation_perc)
-            else:
-                allobj.cumulativeperc = 0
-            subtotal = subtotal + allobj.cumulativeperc
+            subtotal+=obj.cumulativeperc
+
+        # subtotal = 0
+        # for allobj in Scope.objects.filter(quotation_id=quotation.id):
+        #     allobj.cumulativeqty = \
+        #         SiteProgress.objects.filter(project_id=content_pk, description__iexact=allobj.description).aggregate(
+        #             Sum('qty'))['qty__sum']
+        #     if allobj.allocation_perc and allobj.cumulativeqty:
+        #         allobj.cumulativeperc = float(allobj.cumulativeqty / allobj.qty) * float(allobj.allocation_perc)
+        #     else:
+        #         allobj.cumulativeperc = 0
+        #     subtotal = subtotal + allobj.cumulativeperc
 
         context['projectitems'] = projectitems
         context['projectitemall'] = Scope.objects.filter(quotation_id=quotation.id)
@@ -504,12 +563,14 @@ class ProjectDetailView(DetailView):
         context['tbm_descriptions'] = ToolBoxDescription.objects.all()
         return context
 
+
 @ajax_login_required
 def ajax_filter_description(request):
     if request.method == "POST":
         toolbox_objective = request.POST.get('toolbox_objective')
-        descriptions = ToolBoxDescription.objects.filter(objective_id = toolbox_objective)
+        descriptions = ToolBoxDescription.objects.filter(objective_id=toolbox_objective)
         return render(request, 'projects/ajax-tbm-description.html', {'descriptions': descriptions})
+
 
 @ajax_login_required
 def ajax_add_proj_file(request):
@@ -521,20 +582,21 @@ def ajax_add_proj_file(request):
             try:
                 ProjectFile.objects.create(
                     name=name,
-                    document = request.FILES.get('document'),
+                    document=request.FILES.get('document'),
                     uploaded_by_id=request.user.id,
-                    project_id = projectid,
+                    project_id=projectid,
                     date=datetime.datetime.now().date()
                 )
                 return JsonResponse({
                     "status": "Success",
                     "messages": "Project File information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def ajax_all_mandays(request):
@@ -560,36 +622,37 @@ def ajax_all_mandays(request):
                 modetime = datetime.timedelta(hours=17)
                 holiday_modetime = datetime.timedelta(hours=8)
                 t = q.checkout_time
-                #q.estimate_day = (q.checkout_time.date() - q.checkin_time.date()).days
+                # q.estimate_day = (q.checkout_time.date() - q.checkin_time.date()).days
                 q.estimate_day = (q.end_date - q.start_date).days
                 if q.checkout_time.date() > q.checkin_time.date():
-                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second) + datetime.timedelta(hours=24)
+                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute,
+                                                  seconds=t.second) + datetime.timedelta(hours=24)
                 else:
                     timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
                 check_weekday = q.checkin_time.weekday()
                 check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
                 if check_weekday == 6 or check_holiday == True:
-                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds()//60
-                    ph_mins = int(ph_min_check//15)
+                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
+                    ph_mins = int(ph_min_check // 15)
                     if ph_mins > 32:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25 - 1)
+                        q.secondhr = str(ph_mins * 0.25 - 1)
                         q.meal_allowance = 0
                     else:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25)
+                        q.secondhr = str(ph_mins * 0.25)
                         q.meal_allowance = 0
                 else:
                     if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds()//60
-                        mins = min_check//15
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
                         if mins >= 20:
-                            q.firsthr = str(mins*0.25 - 0.5)
+                            q.firsthr = str(mins * 0.25 - 0.5)
                             q.secondhr = 0
                             q.meal_allowance = 1
-                            
+
                         else:
-                            q.firsthr = str(mins*0.25)
+                            q.firsthr = str(mins * 0.25)
                             q.secondhr = 0
                             q.meal_allowance = 0
                     else:
@@ -616,7 +679,10 @@ def ajax_all_mandays(request):
                         total_2hr += float(q.secondhr)
                         temp_emp_no1 = q.emp_no
                         temp_checkin1 = q.checkin_time.date()
-        return render(request, 'projects/ajax-mandays-list.html', {'mandays': query_ots,'estimated_mandays': estimated_mandays, 'actual_mondays': actual_mondays, 'total_1hr': total_1hr, 'total_2hr': total_2hr})
+        return render(request, 'projects/ajax-mandays-list.html',
+                      {'mandays': query_ots, 'estimated_mandays': estimated_mandays, 'actual_mondays': actual_mondays,
+                       'total_1hr': total_1hr, 'total_2hr': total_2hr})
+
 
 @ajax_login_required
 def ajax_filter_mandays(request):
@@ -634,33 +700,34 @@ def ajax_filter_mandays(request):
                 t = q.checkout_time
                 q.estimate_day = (q.checkout_time.date() - q.checkin_time.date()).days
                 if q.checkout_time.date() > q.checkin_time.date():
-                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second) + datetime.timedelta(hours=24)
+                    timediff = datetime.timedelta(hours=t.hour, minutes=t.minute,
+                                                  seconds=t.second) + datetime.timedelta(hours=24)
                 else:
                     timediff = datetime.timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
                 check_weekday = q.checkin_time.weekday()
                 check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
                 if check_weekday == 6 or check_holiday == True:
-                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds()//60
-                    ph_mins = int(ph_min_check//15)
+                    ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
+                    ph_mins = int(ph_min_check // 15)
                     if ph_mins > 32:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25 - 1)
+                        q.secondhr = str(ph_mins * 0.25 - 1)
                         q.meal_allowance = 0
                     else:
                         q.firsthr = 0
-                        q.secondhr = str(ph_mins*0.25)
+                        q.secondhr = str(ph_mins * 0.25)
                         q.meal_allowance = 0
                 else:
                     if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds()//60
-                        mins = min_check//15
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
                         if mins >= 20:
-                            q.firsthr = str(mins*0.25 - 0.5)
+                            q.firsthr = str(mins * 0.25 - 0.5)
                             q.secondhr = 0
                             q.meal_allowance = 1
-                            
+
                         else:
-                            q.firsthr = str(mins*0.25)
+                            q.firsthr = str(mins * 0.25)
                             q.secondhr = 0
                             q.meal_allowance = 0
                     else:
@@ -672,12 +739,14 @@ def ajax_filter_mandays(request):
             if q.checkout_time is not None and q.checkin_time is not None:
                 total_1hr += float(str(q.firsthr).replace('HR', ''))
                 total_2hr += float(str(q.secondhr).replace('HR', ''))
-        return render(request, 'projects/ajax-mandays-list.html', {'mandays': query_ots, 'total_1hr': total_1hr, 'total_2hr': total_2hr})
+        return render(request, 'projects/ajax-mandays-list.html',
+                      {'mandays': query_ots, 'total_1hr': total_1hr, 'total_2hr': total_2hr})
+
 
 @ajax_login_required
 def UpdateSummary(request):
     if request.method == "POST":
-        
+
         company_name = request.POST.get('company_name')
         proj_name = request.POST.get('proj_name')
         worksite_address = request.POST.get('worksite_address')
@@ -702,15 +771,16 @@ def UpdateSummary(request):
         summaryid = request.POST.get('summaryid')
 
         payload = {
-            'searchVal': proj_postalcode, 
+            'searchVal': proj_postalcode,
             'returnGeom': 'Y',
             'getAddrDetails': 'Y',
             'pageNum': '1'
         }
-        #get long and lat data using postal code
-        mapinfo = requests.get('https://developers.onemap.sg/commonapi/search',headers={"content-type":"application/json"}, params=payload)
+        # get long and lat data using postal code
+        mapinfo = requests.get('https://developers.onemap.sg/commonapi/search',
+                               headers={"content-type": "application/json"}, params=payload)
         lat_lon_data = mapinfo.json()["results"]
-        if(len(lat_lon_data) != 0):
+        if (len(lat_lon_data) != 0):
             latitude = lat_lon_data[0]["LATITUDE"]
             longitude = lat_lon_data[0]["LONGITUDE"]
         else:
@@ -718,40 +788,41 @@ def UpdateSummary(request):
             longitude = ""
         try:
             summary = Project.objects.get(id=summaryid)
-            
-            summary.company_name_id=company_name
-            summary.proj_name=proj_name
-            summary.worksite_address=worksite_address
-            summary.contact_person_id=contact_person
-            summary.email=email
-            summary.tel=tel
-            summary.fax=fax
-            summary.qtt_id=qtt_id
-            summary.proj_id=proj_id
-            summary.proj_incharge=proj_incharge
-            summary.site_incharge=site_incharge
-            summary.site_tel=site_tel
-            summary.start_date=start_date
-            summary.end_date=end_date
+
+            summary.company_name_id = company_name
+            summary.proj_name = proj_name
+            summary.worksite_address = worksite_address
+            summary.contact_person_id = contact_person
+            summary.email = email
+            summary.tel = tel
+            summary.fax = fax
+            summary.qtt_id = qtt_id
+            summary.proj_id = proj_id
+            summary.proj_incharge = proj_incharge
+            summary.site_incharge = site_incharge
+            summary.site_tel = site_tel
+            summary.start_date = start_date
+            summary.end_date = end_date
             summary.proj_postalcode = proj_postalcode
-            summary.latitude=latitude
-            summary.longitude=longitude
-            summary.proj_status=proj_status
-            summary.variation_order=variation_order
-            summary.note=note
-            summary.RE=RE
+            summary.latitude = latitude
+            summary.longitude = longitude
+            summary.proj_status = proj_status
+            summary.variation_order = variation_order
+            summary.note = note
+            summary.RE = RE
             summary.save()
 
             return JsonResponse({
                 "status": "Success",
                 "messages": "Project Summary information updated!"
             })
-        except IntegrityError as e: 
+        except IntegrityError as e:
             print(e)
             return JsonResponse({
                 "status": "Error",
                 "messages": "Error is existed!"
             })
+
 
 @ajax_login_required
 def summarydelete(request):
@@ -762,6 +833,7 @@ def summarydelete(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 @ajax_login_required
 def otadd(request):
     if request.method == "POST":
@@ -771,7 +843,7 @@ def otadd(request):
         approved_by = request.POST.get('approved_by')
         comment = request.POST.get('comment')
         proj_name = request.POST.get('proj_name')
-        
+
         otid = request.POST.get('otid')
         if otid == "-1":
             try:
@@ -794,7 +866,7 @@ def otadd(request):
                         "status": "Success",
                         "messages": "OT information added!"
                     })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -807,7 +879,7 @@ def otadd(request):
                 ot.approved_hour = approved_hour
                 ot.approved_by = approved_by
                 ot.comment = comment
-                ot.proj_name=proj_name
+                ot.proj_name = proj_name
                 ot.save()
 
                 return JsonResponse({
@@ -815,7 +887,7 @@ def otadd(request):
                     "messages": "OT information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -847,29 +919,32 @@ def otdelete(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, decimal.Decimal):
             return str(o)
         return super(DecimalEncoder, self).default(o)
 
+
 @ajax_login_required
 def check_do_number(request):
     if request.method == "POST":
         if Do.objects.all().exists():
-            do= Do.objects.all().order_by('-do_no')[0]
+            do = Do.objects.all().order_by('-do_no')[0]
             data = {
                 "status": "exist",
-                "do_no": do.do_no.replace('CDO','').split()[0]
+                "do_no": do.do_no.replace('CDO', '').split()[0]
             }
-        
+
             return JsonResponse(data)
         else:
             data = {
                 "status": "no exist"
             }
-        
+
             return JsonResponse(data)
+
 
 @ajax_login_required
 def getBom(request):
@@ -899,6 +974,7 @@ def getBom(request):
             }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def bomadd(request):
     if request.method == "POST":
@@ -907,7 +983,7 @@ def bomadd(request):
         ordered_qty = request.POST.get('ordered_qty')
         brand = request.POST.get('brand')
         delivery_qty = request.POST.get('delivery_qty')
-        if(delivery_qty == ""):
+        if (delivery_qty == ""):
             delivery_qty = 0
         delivered_po_no = request.POST.get('delivered_po_no')
         date = request.POST.get('date')
@@ -933,7 +1009,7 @@ def bomadd(request):
                     "status": "Success",
                     "messages": "Bom information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Bom is existed!"
@@ -945,10 +1021,10 @@ def bomadd(request):
                 bom.uom_id = uom
                 bom.ordered_qty = ordered_qty
                 bom.brand = brand
-                bom.delivered_qty=delivery_qty
-                bom.delivered_po_no=delivered_po_no
+                bom.delivered_qty = delivery_qty
+                bom.delivered_po_no = delivered_po_no
                 bom.date = date
-                bom.remark=remark
+                bom.remark = remark
                 bom.project_id = projectid
                 bom.save()
 
@@ -957,11 +1033,12 @@ def bomadd(request):
                     "messages": "Bom information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Bom is existed!"
                 })
+
 
 @ajax_login_required
 def bomlogadd(request):
@@ -969,7 +1046,7 @@ def bomlogadd(request):
         description = request.POST.get('description')
         uom = request.POST.get('uom')
         delivered_qty = request.POST.get('delivered_qty')
-        if(delivered_qty == ""):
+        if (delivered_qty == ""):
             delivered_qty = 0
         do_no = request.POST.get('do_no')
         date = request.POST.get('date')
@@ -991,7 +1068,9 @@ def bomlogadd(request):
                     bom_id=bomid,
                     project_id=projectid,
                 )
-                total_delivered_qty = BomLog.objects.filter(bom_id=bomid, project_id=projectid).aggregate(Sum('delivered_qty'))['delivered_qty__sum']
+                total_delivered_qty = \
+                    BomLog.objects.filter(bom_id=bomid, project_id=projectid).aggregate(Sum('delivered_qty'))[
+                        'delivered_qty__sum']
                 bom = Bom.objects.get(id=bomid)
                 bom.delivered_qty = total_delivered_qty
                 bom.save()
@@ -999,12 +1078,13 @@ def bomlogadd(request):
                     "status": "Success",
                     "messages": "Bom Log information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 print(e)
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Bom Log is existed!"
                 })
+
 
 @ajax_login_required
 def doadd(request):
@@ -1034,7 +1114,7 @@ def doadd(request):
                     "newDoId": do.id,
                     "method": "add"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Do is existed!",
@@ -1044,9 +1124,9 @@ def doadd(request):
                 do = Do.objects.get(id=doid)
                 do.do_no = do_no
                 do.date = date
-                do.created_by_id=request.user.id
+                do.created_by_id = request.user.id
                 # do.status = "Open"
-                do.upload_by_id=request.user.id
+                do.upload_by_id = request.user.id
                 # do.project_id = projectid
                 do.save()
 
@@ -1057,11 +1137,12 @@ def doadd(request):
                     "method": "update"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Do is existed!"
                 })
+
 
 @ajax_login_required
 def dodocadd(request):
@@ -1070,7 +1151,7 @@ def dodocadd(request):
         dodocid = request.POST.get('dodocid')
         try:
             do = Do.objects.get(id=dodocid)
-            do.upload_by_id=request.user.id
+            do.upload_by_id = request.user.id
             do.project_id = projectid
             if request.FILES.get('document'):
                 do.document = request.FILES.get('document')
@@ -1082,11 +1163,12 @@ def dodocadd(request):
                 "messages": "Do Document uploaded!"
             })
 
-        except IntegrityError as e: 
+        except IntegrityError as e:
             return JsonResponse({
                 "status": "Error",
                 "messages": "Error!"
             })
+
 
 @ajax_login_required
 def srdocadd(request):
@@ -1095,7 +1177,7 @@ def srdocadd(request):
         srdocid = request.POST.get('srdocid')
         try:
             sr = Sr.objects.get(id=srdocid)
-            sr.uploaded_by_id=request.user.id
+            sr.uploaded_by_id = request.user.id
             sr.project_id = projectid
             if request.FILES.get('document'):
                 sr.document = request.FILES.get('document')
@@ -1107,11 +1189,12 @@ def srdocadd(request):
                 "messages": "Sr Document uploaded!"
             })
 
-        except IntegrityError as e: 
+        except IntegrityError as e:
             return JsonResponse({
                 "status": "Error",
                 "messages": "Error!"
             })
+
 
 @ajax_login_required
 def pcdocadd(request):
@@ -1120,7 +1203,7 @@ def pcdocadd(request):
         pcdocid = request.POST.get('pcdocid')
         try:
             pc = Pc.objects.get(id=pcdocid)
-            pc.uploaded_by_id=request.user.id
+            pc.uploaded_by_id = request.user.id
             pc.project_id = projectid
             if request.FILES.get('document'):
                 pc.document = request.FILES.get('document')
@@ -1132,7 +1215,7 @@ def pcdocadd(request):
                 "messages": "PC Document uploaded!"
             })
 
-        except IntegrityError as e: 
+        except IntegrityError as e:
             return JsonResponse({
                 "status": "Error",
                 "messages": "Error!"
@@ -1162,7 +1245,7 @@ def teamadd(request):
                     "status": "Success",
                     "messages": "Team information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Team is existed!"
@@ -1174,7 +1257,7 @@ def teamadd(request):
                 team.first_name = tuser.first_name
                 team.last_name = tuser.last_name
                 team.role = tuser.role
-                team.priority=priority
+                team.priority = priority
                 team.project_id = projectid
                 team.user_id = tuser.id
                 team.save()
@@ -1184,11 +1267,12 @@ def teamadd(request):
                     "messages": "Team information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Team is existed!"
                 })
+
 
 @ajax_login_required
 def getTeam(request):
@@ -1201,6 +1285,8 @@ def getTeam(request):
 
         }
         return JsonResponse(json.dumps(data), safe=False)
+
+
 @ajax_login_required
 def deleteTeam(request):
     if request.method == "POST":
@@ -1209,6 +1295,8 @@ def deleteTeam(request):
         team.delete()
 
         return JsonResponse({'status': 'ok'})
+
+
 @ajax_login_required
 def deleteFile(request):
     if request.method == "POST":
@@ -1217,6 +1305,7 @@ def deleteFile(request):
         projfile.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def deleteBom(request):
@@ -1227,6 +1316,7 @@ def deleteBom(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 @ajax_login_required
 def deleteDo(request):
     if request.method == "POST":
@@ -1235,6 +1325,7 @@ def deleteDo(request):
         dodata.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def deleteSR(request):
@@ -1245,6 +1336,7 @@ def deleteSR(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 @ajax_login_required
 def deletePc(request):
     if request.method == "POST":
@@ -1254,6 +1346,7 @@ def deletePc(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 def ajax_export_team(request, projectid):
     resource = TeamResource()
     queryset = Team.objects.filter(project_id=projectid)
@@ -1261,6 +1354,7 @@ def ajax_export_team(request, projectid):
     response = HttpResponse(dataset.csv, content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="project_team.csv"'
     return response
+
 
 def ajax_export_bom(request, projectid):
     resource = BomResource()
@@ -1270,6 +1364,7 @@ def ajax_export_bom(request, projectid):
     response['Content-Disposition'] = 'attachment; filename="project_bom.csv"'
     return response
 
+
 def ajax_export_siteprogress(request, projectid):
     resource = SiteProgressResource()
     queryset = SiteProgress.objects.filter(project_id=projectid)
@@ -1278,11 +1373,12 @@ def ajax_export_siteprogress(request, projectid):
     response['Content-Disposition'] = 'attachment; filename="site_progress_log.csv"'
     return response
 
+
 @method_decorator(login_required, name='dispatch')
 class DoDetailView(DetailView):
     model = Do
     pk_url_kwarg = 'dopk'
-    template_name="projects/delivery-order-detail.html"
+    template_name = "projects/delivery-order-detail.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1300,18 +1396,19 @@ class DoDetailView(DetailView):
         quotation = summary.quotation
         context['doitems'] = DoItem.objects.filter(project_id=proj_pk, do_id=do_pk)
         context['quotation'] = quotation
-        if(DOSignature.objects.filter(project_id=proj_pk, do_id=do_pk).exists()):
+        if (DOSignature.objects.filter(project_id=proj_pk, do_id=do_pk).exists()):
             context['dosignature'] = DOSignature.objects.get(project_id=proj_pk, do_id=do_pk)
         else:
             context['dosignature'] = None
         context['projectitemall'] = Scope.objects.filter(quotation_id=quotation.id)
         return context
 
+
 @method_decorator(login_required, name='dispatch')
 class DoSignatureCreate(generic.CreateView):
     model = DOSignature
     fields = '__all__'
-    template_name="projects/delivery-signature.html"
+    template_name = "projects/delivery-signature.html"
 
     def post(self, request, *args, **kwargs):
         if request.method == 'POST':
@@ -1321,19 +1418,22 @@ class DoSignatureCreate(generic.CreateView):
             DOSignature.objects.create(
                 signature=request.POST.get('signature'),
                 name=sign_name,
-                nric = sign_nric,
-                update_date = datetime.datetime.strptime(sign_date,'%d %b %Y'),
+                nric=sign_nric,
+                update_date=datetime.datetime.strptime(sign_date, '%d %b %Y'),
                 do_id=self.kwargs.get('dopk'),
                 project_id=self.kwargs.get('pk')
             )
-            return HttpResponseRedirect('/project-detail/' + self.kwargs.get('pk') + '/delivery-order-detail/' + self.kwargs.get('dopk'))
+            return HttpResponseRedirect(
+                '/project-detail/' + self.kwargs.get('pk') + '/delivery-order-detail/' + self.kwargs.get('dopk'))
+
 
 @method_decorator(login_required, name='dispatch')
 class DoSignatureUpdate(generic.UpdateView):
     model = DOSignature
     pk_url_kwarg = 'signpk'
     fields = '__all__'
-    template_name="projects/delivery-signature.html"
+    template_name = "projects/delivery-signature.html"
+
     def post(self, request, *args, **kwargs):
         if request.method == 'POST':
             sign_name = request.POST.get("sign_name")
@@ -1343,12 +1443,14 @@ class DoSignatureUpdate(generic.UpdateView):
             doSignature.signature = request.POST.get('signature')
             doSignature.name = sign_name
             doSignature.nric = sign_nric
-            doSignature.update_date = datetime.datetime.strptime(sign_date.replace(',', ""),'%d %b %Y').date()
+            doSignature.update_date = datetime.datetime.strptime(sign_date.replace(',', ""), '%d %b %Y').date()
             doSignature.do_id = self.kwargs.get('dopk')
             doSignature.project_id = self.kwargs.get('pk')
             doSignature.save()
 
-            return HttpResponseRedirect('/project-detail/' + self.kwargs.get('pk') + '/delivery-order-detail/' + self.kwargs.get('dopk'))
+            return HttpResponseRedirect(
+                '/project-detail/' + self.kwargs.get('pk') + '/delivery-order-detail/' + self.kwargs.get('dopk'))
+
 
 @ajax_login_required
 def deliverysignadd(request):
@@ -1361,10 +1463,11 @@ def deliverysignadd(request):
         projectid = request.POST.get('projectid')
         default_base64 = request.POST.get("default_base64")
         doid = request.POST.get('doid')
-        
+
         format, imgstr = default_base64.split(';base64,')
         ext = format.split('/')[-1]
-        signature_image = ContentFile(base64.b64decode(imgstr), name='delivery-sign-' + datetime.date.today().strftime("%d-%m-%Y") + "." + ext)
+        signature_image = ContentFile(base64.b64decode(imgstr),
+                                      name='delivery-sign-' + datetime.date.today().strftime("%d-%m-%Y") + "." + ext)
         if deliveryid == "-1":
             try:
                 DOSignature.objects.create(
@@ -1380,7 +1483,7 @@ def deliverysignadd(request):
                     "status": "Success",
                     "messages": "Delivery Signature information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -1388,13 +1491,13 @@ def deliverysignadd(request):
         else:
             try:
                 dosignature = DOSignature.objects.get(id=deliveryid)
-                dosignature.name=name
-                dosignature.nric=nric
-                dosignature.update_date=date
-                dosignature.signature=signature
-                dosignature.do_id=doid
-                dosignature.project_id=projectid
-                dosignature.signature_image=signature_image
+                dosignature.name = name
+                dosignature.nric = nric
+                dosignature.update_date = date
+                dosignature.signature = signature
+                dosignature.do_id = doid
+                dosignature.project_id = projectid
+                dosignature.signature_image = signature_image
                 dosignature.save()
 
                 return JsonResponse({
@@ -1402,11 +1505,12 @@ def deliverysignadd(request):
                     "messages": "Delivery Signature information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def getDeliverySign(request):
@@ -1421,6 +1525,7 @@ def getDeliverySign(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def getServiceSign(request):
     if request.method == "POST":
@@ -1434,6 +1539,7 @@ def getServiceSign(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def servicesignadd(request):
     if request.method == "POST":
@@ -1445,10 +1551,11 @@ def servicesignadd(request):
         projectid = request.POST.get('projectid')
         default_base64 = request.POST.get("default_base64")
         srid = request.POST.get('srid')
-        
+
         format, imgstr = default_base64.split(';base64,')
         ext = format.split('/')[-1]
-        signature_image = ContentFile(base64.b64decode(imgstr), name='service-sign-' + datetime.date.today().strftime("%d-%m-%Y") + "." + ext)
+        signature_image = ContentFile(base64.b64decode(imgstr),
+                                      name='service-sign-' + datetime.date.today().strftime("%d-%m-%Y") + "." + ext)
         if serviceid == "-1":
             try:
                 SRSignature.objects.create(
@@ -1464,7 +1571,7 @@ def servicesignadd(request):
                     "status": "Success",
                     "messages": "Service Signature information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -1472,13 +1579,13 @@ def servicesignadd(request):
         else:
             try:
                 srsignature = SRSignature.objects.get(id=serviceid)
-                srsignature.name=name
-                srsignature.nric=nric
-                srsignature.update_date=date
-                srsignature.signature=signature
-                srsignature.sr_id=srid
-                srsignature.project_id=projectid
-                srsignature.signature_image=signature_image
+                srsignature.name = name
+                srsignature.nric = nric
+                srsignature.update_date = date
+                srsignature.signature = signature
+                srsignature.sr_id = srid
+                srsignature.project_id = projectid
+                srsignature.signature_image = signature_image
                 srsignature.save()
 
                 return JsonResponse({
@@ -1486,47 +1593,50 @@ def servicesignadd(request):
                     "messages": "Service Signature information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
 
+
 @ajax_login_required
 def check_sr_number(request):
     if request.method == "POST":
         if Sr.objects.all().exists():
-            sr= Sr.objects.all().order_by('-sr_no')[0]
+            sr = Sr.objects.all().order_by('-sr_no')[0]
             data = {
                 "status": "exist",
-                "sr_no": sr.sr_no.replace('CSR','').split()[0]
+                "sr_no": sr.sr_no.replace('CSR', '').split()[0]
             }
-        
+
             return JsonResponse(data)
         else:
             data = {
                 "status": "no exist"
             }
-        
+
             return JsonResponse(data)
+
 
 @ajax_login_required
 def check_pc_number(request):
     if request.method == "POST":
         if Pc.objects.all().exists():
-            pc= Pc.objects.all().order_by('-pc_no')[0]
+            pc = Pc.objects.all().order_by('-pc_no')[0]
             data = {
                 "status": "exist",
-                "pc_no": pc.pc_no.replace('CPC','').split()[0]
+                "pc_no": pc.pc_no.replace('CPC', '').split()[0]
             }
-        
+
             return JsonResponse(data)
         else:
             data = {
                 "status": "no exist"
             }
-        
+
             return JsonResponse(data)
+
 
 @ajax_login_required
 def sradd(request):
@@ -1557,7 +1667,7 @@ def sradd(request):
                     "newSrID": sr.id,
                     "messages": "Service Report information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already SR is existed!"
@@ -1568,7 +1678,7 @@ def sradd(request):
                 sr.sr_no = sr_no
                 sr.date = date
                 sr.status = "Open"
-                sr.created_by_id=request.user.id,
+                sr.created_by_id = request.user.id,
                 # sr.uploaded_by_id=request.user.id
                 sr.project_id = projectid
                 sr.save()
@@ -1580,11 +1690,12 @@ def sradd(request):
                     "messages": "Service Report information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already SR is existed!"
                 })
+
 
 @ajax_login_required
 def pcadd(request):
@@ -1614,7 +1725,7 @@ def pcadd(request):
                     "newPcID": pc.id,
                     "messages": "Progress Claim information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already PC is existed!"
@@ -1636,17 +1747,18 @@ def pcadd(request):
                     "messages": "Progress Claim information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already PC is existed!"
                 })
 
+
 @method_decorator(login_required, name='dispatch')
 class SrDetailView(DetailView):
     model = Sr
     pk_url_kwarg = 'srpk'
-    template_name="projects/service-report-detail.html"
+    template_name = "projects/service-report-detail.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1663,12 +1775,13 @@ class SrDetailView(DetailView):
         quotation = summary.quotation
         context['sritems'] = SrItem.objects.filter(project_id=proj_pk, sr_id=sr_pk)
         context['quotation'] = quotation
-        if(SRSignature.objects.filter(project_id=proj_pk, sr_id=sr_pk).exists()):
+        if (SRSignature.objects.filter(project_id=proj_pk, sr_id=sr_pk).exists()):
             context['srsignature'] = SRSignature.objects.get(project_id=proj_pk, sr_id=sr_pk)
         else:
             context['srsignature'] = None
         context['projectitemall'] = Scope.objects.filter(quotation_id=quotation.id)
         return context
+
 
 @ajax_login_required
 def ajax_update_service_report(request):
@@ -1682,43 +1795,45 @@ def ajax_update_service_report(request):
         servicepk = request.POST.get('servicepk')
 
         srdata = Sr.objects.get(id=servicepk)
-        srdata.srtype=srtype
-        srdata.srpurpose=srpurpose
-        srdata.srsystem =srsystem 
-        srdata.time_in=date_parser.parse(timein).replace(tzinfo=pytz.utc)
-        srdata.time_out=date_parser.parse(timeout).replace(tzinfo=pytz.utc)
-        srdata.remark=remark
+        srdata.srtype = srtype
+        srdata.srpurpose = srpurpose
+        srdata.srsystem = srsystem
+        srdata.time_in = date_parser.parse(timein).replace(tzinfo=pytz.utc)
+        srdata.time_out = date_parser.parse(timeout).replace(tzinfo=pytz.utc)
+        srdata.remark = remark
         srdata.save()
 
         return JsonResponse({
-                "status": "Success",
-                "messages": "Service Report information updated!"
-            })
+            "status": "Success",
+            "messages": "Service Report information updated!"
+        })
+
 
 @ajax_login_required
 def ajax_update_progress_claim(request):
     if request.method == "POST":
         pcclaimno = request.POST.get('pcclaimno')
-        #terms = request.POST.get("terms")
+        # terms = request.POST.get("terms")
         less_previous_claim = request.POST.get("less_previous_claim")
         progresspk = request.POST.get('progresspk')
 
         pcdata = Pc.objects.get(id=progresspk)
-        pcdata.claim_no=int(pcclaimno)
-        #pcdata.terms = terms
+        pcdata.claim_no = int(pcclaimno)
+        # pcdata.terms = terms
         pcdata.less_previous_claim = less_previous_claim
         pcdata.save()
 
         return JsonResponse({
-                "status": "Success",
-                "messages": "Progress Claim information updated!"
-            })
+            "status": "Success",
+            "messages": "Progress Claim information updated!"
+        })
+
 
 @method_decorator(login_required, name='dispatch')
 class SrSignatureCreate(generic.CreateView):
     model = SRSignature
     fields = '__all__'
-    template_name="projects/service-signature.html"
+    template_name = "projects/service-signature.html"
 
     def post(self, request, *args, **kwargs):
         if request.method == 'POST':
@@ -1728,19 +1843,22 @@ class SrSignatureCreate(generic.CreateView):
             SRSignature.objects.create(
                 signature=request.POST.get('signature'),
                 name=sign_name,
-                nric = sign_nric,
-                update_date = datetime.datetime.strptime(sign_date,'%d %b %Y'),
+                nric=sign_nric,
+                update_date=datetime.datetime.strptime(sign_date, '%d %b %Y'),
                 sr_id=self.kwargs.get('srpk'),
                 project_id=self.kwargs.get('pk')
             )
-            return HttpResponseRedirect('/project-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))
+            return HttpResponseRedirect(
+                '/project-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))
+
 
 @method_decorator(login_required, name='dispatch')
 class SrSignatureUpdate(generic.UpdateView):
     model = SRSignature
     pk_url_kwarg = 'signpk'
     fields = '__all__'
-    template_name="projects/service-signature.html"
+    template_name = "projects/service-signature.html"
+
     def post(self, request, *args, **kwargs):
         if request.method == 'POST':
             sign_name = request.POST.get("sign_name")
@@ -1750,19 +1868,20 @@ class SrSignatureUpdate(generic.UpdateView):
             srSignature.signature = request.POST.get('signature')
             srSignature.name = sign_name
             srSignature.nric = sign_nric
-            srSignature.update_date = datetime.datetime.strptime(sign_date.replace(',', ""),'%d %b %Y').date()
+            srSignature.update_date = datetime.datetime.strptime(sign_date.replace(',', ""), '%d %b %Y').date()
             srSignature.sr_id = self.kwargs.get('srpk')
             srSignature.project_id = self.kwargs.get('pk')
             srSignature.save()
 
-            return HttpResponseRedirect('/project-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))
+            return HttpResponseRedirect(
+                '/project-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))
 
 
 @method_decorator(login_required, name='dispatch')
 class PcDetailView(DetailView):
     model = Pc
     pk_url_kwarg = 'pcpk'
-    template_name="projects/progress-claim-detail.html"
+    template_name = "projects/progress-claim-detail.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1785,18 +1904,19 @@ class PcDetailView(DetailView):
             context['subtotal'] = subtotal
             context['gst'] = gst
             context['total_detail'] = float(subtotal) + gst
-        if(PCSignature.objects.filter(project_id=proj_pk, pc_id=pc_pk).exists()):
+        if (PCSignature.objects.filter(project_id=proj_pk, pc_id=pc_pk).exists()):
             context['pcsignature'] = PCSignature.objects.get(project_id=proj_pk, pc_id=pc_pk)
         else:
             context['pcsignature'] = None
         context['projectitemall'] = Scope.objects.filter(quotation_id=quotation.id)
         return context
 
+
 @method_decorator(login_required, name='dispatch')
 class PcSignatureCreate(generic.CreateView):
     model = PCSignature
     fields = '__all__'
-    template_name="projects/progress-signature.html"
+    template_name = "projects/progress-signature.html"
 
     def post(self, request, *args, **kwargs):
         if request.method == 'POST':
@@ -1806,19 +1926,22 @@ class PcSignatureCreate(generic.CreateView):
             PCSignature.objects.create(
                 signature=request.POST.get('signature'),
                 name=sign_name,
-                nric = sign_nric,
-                update_date = datetime.datetime.strptime(sign_date,'%d %b %Y'),
+                nric=sign_nric,
+                update_date=datetime.datetime.strptime(sign_date, '%d %b %Y'),
                 pc_id=self.kwargs.get('pcpk'),
                 project_id=self.kwargs.get('pk')
             )
-            return HttpResponseRedirect('/project-detail/' + self.kwargs.get('pk') + '/progress-claim-detail/' + self.kwargs.get('pcpk'))
+            return HttpResponseRedirect(
+                '/project-detail/' + self.kwargs.get('pk') + '/progress-claim-detail/' + self.kwargs.get('pcpk'))
+
 
 @method_decorator(login_required, name='dispatch')
 class PcSignatureUpdate(generic.UpdateView):
     model = PCSignature
     pk_url_kwarg = 'signpk'
     fields = '__all__'
-    template_name="projects/progress-signature.html"
+    template_name = "projects/progress-signature.html"
+
     def post(self, request, *args, **kwargs):
         if request.method == 'POST':
             sign_name = request.POST.get("sign_name")
@@ -1828,12 +1951,13 @@ class PcSignatureUpdate(generic.UpdateView):
             pcSignature.signature = request.POST.get('signature')
             pcSignature.name = sign_name
             pcSignature.nric = sign_nric
-            pcSignature.update_date = datetime.datetime.strptime(sign_date.replace(',', ""),'%d %b %Y').date()
+            pcSignature.update_date = datetime.datetime.strptime(sign_date.replace(',', ""), '%d %b %Y').date()
             pcSignature.pc_id = self.kwargs.get('pcpk')
             pcSignature.project_id = self.kwargs.get('pk')
             pcSignature.save()
 
-            return HttpResponseRedirect('/project-detail/' + self.kwargs.get('pk') + '/progress-claim-detail/' + self.kwargs.get('pcpk'))
+            return HttpResponseRedirect(
+                '/project-detail/' + self.kwargs.get('pk') + '/progress-claim-detail/' + self.kwargs.get('pcpk'))
 
 
 @ajax_login_required
@@ -1844,8 +1968,8 @@ def pcItemAdd(request):
         uom = request.POST.get('uom')
         price = request.POST.get('price')
         done_qty = request.POST.get('done_qty')
-        #done_percent = request.POST.get('done_percent')
-        #amount = request.POST.get('amount')
+        # done_percent = request.POST.get('done_percent')
+        # amount = request.POST.get('amount')
         pcitemid = request.POST.get('pcitemid')
         projectid = request.POST.get('projectid')
         pcid = request.POST.get('pcid')
@@ -1858,8 +1982,8 @@ def pcItemAdd(request):
                     uom_id=uom,
                     price=price,
                     done_qty=done_qty,
-                    done_percent=round(100*float(done_qty)/float(qty), 2),
-                    amount=float(price)*float(done_qty),
+                    done_percent=round(100 * float(done_qty) / float(qty), 2),
+                    amount=float(price) * float(done_qty),
                     project_id=projectid,
                     pc_id=pcid
                 )
@@ -1867,7 +1991,7 @@ def pcItemAdd(request):
                     "status": "Success",
                     "messages": "Progress Claim Item information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already PC Item is existed!"
@@ -1878,12 +2002,12 @@ def pcItemAdd(request):
                 pcitem.description = description
                 pcitem.qty = qty
                 pcitem.uom_id = uom
-                pcitem.price=price
-                pcitem.done_qty=done_qty
-                pcitem.done_percent=round(100*float(done_qty)/float(qty), 2)
-                pcitem.amount=float(price)*float(done_qty)
+                pcitem.price = price
+                pcitem.done_qty = done_qty
+                pcitem.done_percent = round(100 * float(done_qty) / float(qty), 2)
+                pcitem.amount = float(price) * float(done_qty)
                 pcitem.project_id = projectid
-                pcitem.pc_id=pcid
+                pcitem.pc_id = pcid
                 pcitem.save()
 
                 return JsonResponse({
@@ -1891,11 +2015,12 @@ def pcItemAdd(request):
                     "messages": "Progress Claim Item information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already PC Item is existed!"
                 })
+
 
 @ajax_login_required
 def deletePCItem(request):
@@ -1906,6 +2031,7 @@ def deletePCItem(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 @ajax_login_required
 def deleteSRItem(request):
     if request.method == "POST":
@@ -1915,6 +2041,7 @@ def deleteSRItem(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 @ajax_login_required
 def deleteDOItem(request):
     if request.method == "POST":
@@ -1923,6 +2050,7 @@ def deleteDOItem(request):
         doitem.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def srItemAdd(request):
@@ -1947,7 +2075,7 @@ def srItemAdd(request):
                     "status": "Success",
                     "messages": "Service Report Item information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already SR Item is existed!"
@@ -1959,7 +2087,7 @@ def srItemAdd(request):
                 sritem.qty = qty
                 sritem.uom_id = uom
                 sritem.project_id = projectid
-                sritem.sr_id=srid
+                sritem.sr_id = srid
                 sritem.save()
 
                 return JsonResponse({
@@ -1967,11 +2095,12 @@ def srItemAdd(request):
                     "messages": "Service Report Item information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already SR Item is existed!"
                 })
+
 
 @ajax_login_required
 def doItemAdd(request):
@@ -1996,7 +2125,7 @@ def doItemAdd(request):
                     "status": "Success",
                     "messages": "Delivery Order Item information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already DO Item is existed!"
@@ -2008,7 +2137,7 @@ def doItemAdd(request):
                 doitem.qty = qty
                 doitem.uom_id = uom
                 doitem.project_id = projectid
-                doitem.do_id=doid
+                doitem.do_id = doid
                 doitem.save()
 
                 return JsonResponse({
@@ -2016,11 +2145,12 @@ def doItemAdd(request):
                     "messages": "Delivery Order Item information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already DO Item is existed!"
                 })
+
 
 @ajax_login_required
 def getDoItem(request):
@@ -2034,6 +2164,7 @@ def getDoItem(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def getSrItem(request):
     if request.method == "POST":
@@ -2045,6 +2176,7 @@ def getSrItem(request):
             'uom': sritem.uom_id,
         }
         return JsonResponse(json.dumps(data), safe=False)
+
 
 @ajax_login_required
 def getPcItem(request):
@@ -2062,6 +2194,7 @@ def getPcItem(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 def ajax_export_do_item(request, projectid, doid):
     resource = DoItemResource()
     queryset = DoItem.objects.filter(project_id=projectid, do_id=doid)
@@ -2070,6 +2203,7 @@ def ajax_export_do_item(request, projectid, doid):
     response['Content-Disposition'] = 'attachment; filename="project_do_items.csv"'
     return response
 
+
 def ajax_export_sr_item(request, projectid, srid):
     resource = SrItemResource()
     queryset = SrItem.objects.filter(project_id=projectid, sr_id=srid)
@@ -2077,6 +2211,7 @@ def ajax_export_sr_item(request, projectid, srid):
     response = HttpResponse(dataset.csv, content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="project_sr_items.csv"'
     return response
+
 
 @ajax_login_required
 def UpdateDeliveryOrder(request):
@@ -2091,11 +2226,11 @@ def UpdateDeliveryOrder(request):
 
         try:
             delivery = Do.objects.get(id=doid)
-            delivery.company_name=company_name
-            delivery.address=address
-            delivery.attn=attn
-            delivery.tel=tel
-            delivery.ship_to=shipto
+            delivery.company_name = company_name
+            delivery.address = address
+            delivery.attn = attn
+            delivery.tel = tel
+            delivery.ship_to = shipto
 
             delivery.save()
 
@@ -2103,18 +2238,19 @@ def UpdateDeliveryOrder(request):
                 "status": "Success",
                 "messages": "Delivery Order information updated!"
             })
-        except IntegrityError as e: 
+        except IntegrityError as e:
             print(e)
             return JsonResponse({
                 "status": "Error",
                 "messages": "Error is existed!"
             })
 
+
 @method_decorator(login_required, name='dispatch')
 class BomDetailView(DetailView):
     model = Bom
     pk_url_kwarg = 'bompk'
-    template_name="projects/bomlog-detail.html"
+    template_name = "projects/bomlog-detail.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -2124,8 +2260,11 @@ class BomDetailView(DetailView):
         context['bom_pk'] = bom_pk
         context['uoms'] = Uom.objects.all()
         context['bom_logs'] = BomLog.objects.filter(bom_id=bom_pk)
-        context['delivered_total'] = BomLog.objects.filter(bom_id=bom_pk, project_id=proj_pk).aggregate(Sum('delivered_qty'))['delivered_qty__sum']
+        context['delivered_total'] = \
+            BomLog.objects.filter(bom_id=bom_pk, project_id=proj_pk).aggregate(Sum('delivered_qty'))[
+                'delivered_qty__sum']
         return context
+
 
 @ajax_login_required
 def subitemadd(request):
@@ -2150,11 +2289,12 @@ def subitemadd(request):
         # allocation_sum = Scope.objects.filter(parent_id=itemid).aggregate(Sum('allocation_perc'))['allocation_perc__sum']
         # parent.allocation_perc = allocation_sum
         # parent.save()
-        
+
         return JsonResponse({
             "status": "Success",
             "messages": "Scope Item information added!"
         })
+
 
 @ajax_login_required
 def getItem(request):
@@ -2169,6 +2309,7 @@ def getItem(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def getItemUom(request):
     if request.method == "POST":
@@ -2180,6 +2321,7 @@ def getItemUom(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def itemadd(request):
     if request.method == "POST":
@@ -2188,31 +2330,31 @@ def itemadd(request):
         qty = request.POST.get('qty')
         allocation = request.POST.get('allocation')
         iid = request.POST.get('iid')
-        
+
         try:
             scope = Scope.objects.get(id=iid)
-            scope.description=description
-            scope.uom_id=uom
-            scope.qty=qty
-            scope.allocation_perc=allocation
-            
+            scope.description = description
+            scope.uom_id = uom
+            scope.qty = qty
+            scope.allocation_perc = allocation
+
             scope.save()
-            #parent allocation_perc update
-            parent = Scope.objects.get(id=scope.parent_id)
-            allocation_sum = Scope.objects.filter(parent_id=scope.parent_id).aggregate(Sum('allocation_perc'))['allocation_perc__sum']
-            
-            parent.allocation_perc = allocation_sum
-            parent.save()
+            # #parent allocation_perc update
+            # parent = Scope.objects.get(id=scope.parent_id)
+            # allocation_sum = Scope.objects.filter(parent_id=scope.parent_id).aggregate(Sum('allocation_perc'))['allocation_perc__sum']
+            # parent.allocation_perc = allocation_sum
+            # parent.save()
             return JsonResponse({
                 "status": "Success",
                 "messages": "Scope information updated!"
             })
-        except IntegrityError as e: 
+        except IntegrityError as e:
             print(e)
             return JsonResponse({
                 "status": "Error",
                 "messages": "Already Scope is existed!"
-            })   
+            })
+
 
 @ajax_login_required
 def siteprogressadd(request):
@@ -2236,7 +2378,7 @@ def siteprogressadd(request):
                     "status": "Success",
                     "messages": "Site Progress information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -2248,7 +2390,7 @@ def siteprogressadd(request):
                 siteprogress.date = date
                 siteprogress.remark = remark
                 siteprogress.qty = qty
-                siteprogress.project_id=projectid
+                siteprogress.project_id = projectid
                 siteprogress.save()
 
                 return JsonResponse({
@@ -2256,11 +2398,12 @@ def siteprogressadd(request):
                     "messages": "Site Progress information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def getSiteProgress(request):
@@ -2275,6 +2418,7 @@ def getSiteProgress(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def sitedelete(request):
     if request.method == "POST":
@@ -2283,6 +2427,7 @@ def sitedelete(request):
         site.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def toolboxitemadd(request):
@@ -2294,7 +2439,7 @@ def toolboxitemadd(request):
         manager = request.POST.get('manager')
         projectid = request.POST.get('projectid')
         toolboxitemid = request.POST.get('toolboxid')
-        
+
         if toolboxitemid == "-1":
             try:
                 ToolBoxItem.objects.create(
@@ -2307,9 +2452,9 @@ def toolboxitemadd(request):
                 return JsonResponse({
                     "status": "Success",
                     "messages": "ToolBox Item information added!",
-                    
+
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -2320,7 +2465,7 @@ def toolboxitemadd(request):
                 tbmitem.activity = activity
                 tbmitem.objective = objective
                 tbmitem.remark = remark
-                tbmitem.manager=manager
+                tbmitem.manager = manager
                 tbmitem.description = description
                 tbmitem.project_id = projectid
                 tbmitem.save()
@@ -2330,11 +2475,12 @@ def toolboxitemadd(request):
                     "messages": "ToolBox Item information updated!",
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def getToolBoxItem(request):
@@ -2349,6 +2495,7 @@ def getToolBoxItem(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def tbmitemdelete(request):
     if request.method == "POST":
@@ -2357,6 +2504,7 @@ def tbmitemdelete(request):
         tbmitem.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 def exportSrPDF(request, value):
     sr = Sr.objects.get(id=value)
@@ -2372,17 +2520,21 @@ def exportSrPDF(request, value):
     response['Content-Disposition'] = 'attachment; filename={}'.format(pdfname)
     story = []
     buff = BytesIO()
-    doc = SimpleDocTemplate(buff, pagesize=portrait(A4), rightMargin=0.25*inch, leftMargin=0.25*inch, topMargin=1.4*inch, bottomMargin=0.25*inch, title=pdfname)
-    styleSheet=getSampleStyleSheet()
-    data= [
-        [Paragraph('''<para align=center><font size=10><b>S/N</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>Description</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>UOM</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>QTY</b></font></para>''')],
+    doc = SimpleDocTemplate(buff, pagesize=portrait(A4), rightMargin=0.25 * inch, leftMargin=0.25 * inch,
+                            topMargin=1.4 * inch, bottomMargin=0.25 * inch, title=pdfname)
+    styleSheet = getSampleStyleSheet()
+    data = [
+        [Paragraph('''<para align=center><font size=10><b>S/N</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>Description</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>UOM</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>QTY</b></font></para>''')],
     ]
 
     if project.start_date:
-        pdate =  project.start_date.strftime('%d %b, %Y')
+        pdate = project.start_date.strftime('%d %b, %Y')
     else:
         pdate = " "
-    
+
     if quotation.company_name.country:
         country = quotation.company_name.country.name
     else:
@@ -2416,48 +2568,66 @@ def exportSrPDF(request, value):
     else:
         srremark = " "
     srinfordata = [
-        [Paragraph('''<para align=left><font size=10><b>To: </b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.company_name)), "", "", "" , Paragraph('''<para align=center><font size=16><b>SERVICE REPORT</b></font></para>''')],
-        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)),"", "", "" , ""],
-        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "" ,"", "", Paragraph('''<para align=left><font size=10><b>SR No:</b> %s</font></para>''' % (sr.sr_no))],
-        ["", "", "" ,"", "", Paragraph('''<para align=left><font size=10><b>Project No.:</b> %s</font></para>''' % (project.proj_id))],
-        [Paragraph('''<para align=left><font size=10><b>Attn :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.contact_person.salutation + " " + project.contact_person.contact_person)),Paragraph('''<para align=left><font size=10><b>Email :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.email)), "", Paragraph('''<para align=left><font size=10><b>Date:</b> %s</font></para>''' % (sr.date.strftime('%d/%m/%Y')))],
-        [Paragraph('''<para align=left><font size=10><b>Tel :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.tel)), Paragraph('''<para align=left><font size=10><b>Fax :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.fax)), "", ""],
-        ["", "", "" ,"", "", ""],
-        [Paragraph('''<para align=left><font size=10><b>Worksite: </b> %s</font></para>''' % (project.worksite_address)), "", "" ,"", "", ""],
-        ["", "", "" ,"", "", ""],
-        [Paragraph('''<para align=left><font size=10><b>Service Type: </b> %s</font></para>''' % (srtype)), "", "" ,"", "", Paragraph('''<para align=left><font size=10><b>Time In: </b> %s</font></para>''' % (time_in))],
-        [Paragraph('''<para align=left><font size=10><b>System: </b> %s</font></para>'''  % (srsystem)), "", "" ,"", "", Paragraph('''<para align=left><font size=10><b>Time Out: </b> %s</font></para>''' % (time_out))],
-        [Paragraph('''<para align=left><font size=10><b>Purpose: </b> %s</font></para>''' % (srpurpose)), "", "" ,"", "", ""],
-        [Paragraph('''<para align=left><font size=10><b>Remark: </b></font></para>'''), "", "" ,"", "", ""],
-        [Paragraph('''<para align=left><font size=10>%s</font></para>''' % (srremark)), "", "" ,"", "", ""],
+        [Paragraph('''<para align=left><font size=10><b>To: </b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.company_name)), "", "", "",
+         Paragraph('''<para align=center><font size=16><b>SERVICE REPORT</b></font></para>''')],
+        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
+         "", "", ""],
+        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
+         "", "", Paragraph('''<para align=left><font size=10><b>SR No:</b> %s</font></para>''' % (sr.sr_no))],
+        ["", "", "", "", "",
+         Paragraph('''<para align=left><font size=10><b>Project No.:</b> %s</font></para>''' % (project.proj_id))],
+        [Paragraph('''<para align=left><font size=10><b>Attn :</b></font></para>'''), Paragraph(
+            '''<para align=left><font size=10>%s</font></para>''' % (
+                    project.contact_person.salutation + " " + project.contact_person.contact_person)),
+         Paragraph('''<para align=left><font size=10><b>Email :</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.email)), "", Paragraph(
+            '''<para align=left><font size=10><b>Date:</b> %s</font></para>''' % (sr.date.strftime('%d/%m/%Y')))],
+        [Paragraph('''<para align=left><font size=10><b>Tel :</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.tel)),
+         Paragraph('''<para align=left><font size=10><b>Fax :</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.fax)), "", ""],
+        ["", "", "", "", "", ""],
+        [Paragraph(
+            '''<para align=left><font size=10><b>Worksite: </b> %s</font></para>''' % (project.worksite_address)), "",
+            "", "", "", ""],
+        ["", "", "", "", "", ""],
+        [Paragraph('''<para align=left><font size=10><b>Service Type: </b> %s</font></para>''' % (srtype)), "", "", "",
+         "", Paragraph('''<para align=left><font size=10><b>Time In: </b> %s</font></para>''' % (time_in))],
+        [Paragraph('''<para align=left><font size=10><b>System: </b> %s</font></para>''' % (srsystem)), "", "", "", "",
+         Paragraph('''<para align=left><font size=10><b>Time Out: </b> %s</font></para>''' % (time_out))],
+        [Paragraph('''<para align=left><font size=10><b>Purpose: </b> %s</font></para>''' % (srpurpose)), "", "", "",
+         "", ""],
+        [Paragraph('''<para align=left><font size=10><b>Remark: </b></font></para>'''), "", "", "", "", ""],
+        [Paragraph('''<para align=left><font size=10>%s</font></para>''' % (srremark)), "", "", "", "", ""],
     ]
     sr_head = ParagraphStyle("justifies", leading=18)
     information = Table(
         srinfordata,
         style=[
-            ('ALIGN',(0,0),(0,0),'LEFT'),
-            ('ALIGN',(1,0),(1,0),'LEFT'),
-            ('VALIGN',(0,0),(-1,0),'BOTTOM'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, 0), 'BOTTOM'),
             ('SPAN', (0, -3), (1, -3)),
-            ('ALIGN',(5,0),(5,-1),'CENTER'),
-            ('SPAN',(1,1),(3,1)),
-            ('SPAN',(1,2),(3,2)),
-            ('SPAN',(3,4),(4,4)),
-            ('SPAN',(0,7),(-1,7)),
-            ('SPAN',(0,9),(-2,9)),
-            ('SPAN',(0,10),(-2,10)),
-            ('SPAN',(0,11),(-1,11)),
-            ('SPAN',(0,13),(-1,13)),
+            ('ALIGN', (5, 0), (5, -1), 'CENTER'),
+            ('SPAN', (1, 1), (3, 1)),
+            ('SPAN', (1, 2), (3, 2)),
+            ('SPAN', (3, 4), (4, 4)),
+            ('SPAN', (0, 7), (-1, 7)),
+            ('SPAN', (0, 9), (-2, 9)),
+            ('SPAN', (0, 10), (-2, 10)),
+            ('SPAN', (0, 11), (-1, 11)),
+            ('SPAN', (0, 13), (-1, 13)),
 
         ]
     )
-    
-    information._argW[0]=0.8*inch
-    information._argW[1]=1.28*inch
-    information._argW[2]=0.8*inch
-    information._argW[3]=1.38*inch
-    information._argW[4]=0.89*inch
-    information._argW[5]=2.17*inch
+
+    information._argW[0] = 0.8 * inch
+    information._argW[1] = 1.28 * inch
+    information._argW[2] = 0.8 * inch
+    information._argW[3] = 1.38 * inch
+    information._argW[4] = 0.89 * inch
+    information._argW[5] = 2.17 * inch
     story.append(Spacer(1, 16))
     story.append(information)
     story.append(Spacer(1, 16))
@@ -2478,44 +2648,44 @@ def exportSrPDF(request, value):
             data.append(temp_data)
             index += 1
 
-        exportD=Table(
+        exportD = Table(
             data,
             style=[
                 ('BACKGROUND', (0, 0), (5, 0), colors.lavender),
-                ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('ALIGN',(0,0),(-1,-1),'CENTER'),
-                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ],
         )
     else:
-        data.append(["No data available in table", "", "", ""]) 
+        data.append(["No data available in table", "", "", ""])
         exportD = Table(
             data,
             style=[
                 ('BACKGROUND', (0, 0), (-1, 0), colors.lavender),
-                ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
-                ('ALIGN',(0,0),(-1,-1),'CENTER'),
-                ('SPAN',(0,1),(-1,-1)),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('SPAN', (0, 1), (-1, -1)),
             ],
         )
-        exportD._argH[1]=0.3*inch
-    exportD._argW[0]=0.40*inch
-    exportD._argW[1]=5.456*inch
-    exportD._argW[2]=0.732*inch
-    exportD._argW[3]=0.732*inch
+        exportD._argH[1] = 0.3 * inch
+    exportD._argW[0] = 0.40 * inch
+    exportD._argW[1] = 5.456 * inch
+    exportD._argW[2] = 0.732 * inch
+    exportD._argW[3] = 0.732 * inch
     story.append(exportD)
     story.append(Spacer(1, 15))
     if len(data) > 6:
         story.append(PageBreak())
         story.append(Spacer(1, 15))
 
-    style_condition = ParagraphStyle(name='left',fontSize=9, parent=styleSheet['Normal'], leftIndent=20, leading=15)
+    style_condition = ParagraphStyle(name='left', fontSize=9, parent=styleSheet['Normal'], leftIndent=20, leading=15)
     story.append(Paragraph("Received the above Goods in Good Order & Condition", style_condition))
-    
+
     story.append(Spacer(1, 10))
-    
-    style_sign = ParagraphStyle(name='left',fontSize=10, parent=styleSheet['Normal'])
+
+    style_sign = ParagraphStyle(name='left', fontSize=10, parent=styleSheet['Normal'])
     sign_title1 = '''
         <para align=left>
             <font size=10><b>Signature: </b></font>
@@ -2526,27 +2696,29 @@ def exportSrPDF(request, value):
             <font size=10><b>Authorised  Signature: </b></font>
         </para>
     '''
-    
-    srtable1=Table(
+
+    srtable1 = Table(
         [
-            [Paragraph('''<para align=left><font size=12><b>For Customers:</b></font></para>'''), Paragraph('''<para align=right><font size=12><b>For CNI TECHNOLOGY PTE LTD:</b></font></para>''')],
+            [Paragraph('''<para align=left><font size=12><b>For Customers:</b></font></para>'''),
+             Paragraph('''<para align=right><font size=12><b>For CNI TECHNOLOGY PTE LTD:</b></font></para>''')],
         ],
         style=[
-            ('VALIGN',(0,0),(0,-1),'TOP'),
+            ('VALIGN', (0, 0), (0, -1), 'TOP'),
         ],
     )
-    srtable1._argW[0]=3.66*inch
-    srtable1._argW[1]=3.66*inch
+    srtable1._argW[0] = 3.66 * inch
+    srtable1._argW[1] = 3.66 * inch
     story.append(srtable1)
     srsignature = SRSignature.objects.filter(sr_id=value)
-    
+
     if srsignature.exists():
         srsign_data = SRSignature.objects.get(sr_id=value)
         sign_name = srsign_data.name
         sign_nric = srsign_data.nric
         sign_date = srsign_data.update_date.strftime('%d/%m/%Y')
-        sign_logo = Image('http://' + domain + srsign_data.signature_image.url, hAlign='LEFT', width=1.2*inch, height=0.8*inch)
-            
+        sign_logo = Image('http://' + domain + srsign_data.signature_image.url, hAlign='LEFT', width=1.2 * inch,
+                          height=0.8 * inch)
+
     else:
         sign_name = ""
         sign_nric = ""
@@ -2555,49 +2727,56 @@ def exportSrPDF(request, value):
 
     if sr.created_by:
         if sr.created_by.signature:
-            auto_sign = Image('http://' + domain + sr.created_by.signature.url, hAlign='LEFT', width=0.8*inch, height=0.8*inch)
+            auto_sign = Image('http://' + domain + sr.created_by.signature.url, hAlign='LEFT', width=0.8 * inch,
+                              height=0.8 * inch)
         else:
             auto_sign = Image('http://' + domain + '/static/assets/images/logo.png', hAlign='LEFT')
     else:
         auto_sign = Image('http://' + domain + '/static/assets/images/logo.png', hAlign='LEFT')
-    srtable3=Table(
+    srtable3 = Table(
         [
-            [Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_name)), "",Paragraph(sign_title2, style_sign), ""],
+            [Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''),
+             Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_name)), "",
+             Paragraph(sign_title2, style_sign), ""],
             [Paragraph(sign_title1, style_sign), "", "", auto_sign, ""],
-            ["", sign_logo,"", "", ""]
+            ["", sign_logo, "", "", ""]
         ],
         style=[
-            ('VALIGN',(0,0),(-1,-1),'TOP'),
-            ('SPAN',(3,0),(-1,0)),
-            ('SPAN',(3,1),(4,-1)),
-            ('SPAN',(1,2),(2,2)),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('SPAN', (3, 0), (-1, 0)),
+            ('SPAN', (3, 1), (4, -1)),
+            ('SPAN', (1, 2), (2, 2)),
         ],
     )
     story.append(Spacer(1, 10))
-    srtable3._argW[0]=1.0*inch
-    srtable3._argW[1]=1.83*inch
-    srtable3._argW[2]=1.63*inch
-    srtable3._argW[3]=1.0*inch
-    srtable3._argW[4]=1.83*inch
+    srtable3._argW[0] = 1.0 * inch
+    srtable3._argW[1] = 1.83 * inch
+    srtable3._argW[2] = 1.63 * inch
+    srtable3._argW[3] = 1.0 * inch
+    srtable3._argW[4] = 1.83 * inch
     story.append(srtable3)
-    srtable4=Table(
+    srtable4 = Table(
         [
-            [Paragraph('''<para align=left spaceb=2><font size=9><b>NRIC</b></font><br/><font size=9><b>(last 3 digits):</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_nric))],
-            [Paragraph('''<para align=left><font size=9><b>Date:</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_date))]
+            [Paragraph(
+                '''<para align=left spaceb=2><font size=9><b>NRIC</b></font><br/><font size=9><b>(last 3 digits):</b></font></para>'''),
+                Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_nric))],
+            [Paragraph('''<para align=left><font size=9><b>Date:</b></font></para>'''),
+             Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_date))]
         ],
         style=[
-            ('VALIGN',(1,0),(1,-1),'MIDDLE'),
+            ('VALIGN', (1, 0), (1, -1), 'MIDDLE'),
         ],
     )
-    srtable4._argW[0]=1.0*inch
-    srtable4._argW[1]=6.32*inch
+    srtable4._argW[0] = 1.0 * inch
+    srtable4._argW[1] = 6.32 * inch
     story.append(Spacer(1, 10))
     story.append(srtable4)
-    doc.build(story,canvasmaker=NumberedCanvas)
+    doc.build(story, canvasmaker=NumberedCanvas)
     response.write(buff.getvalue())
     buff.close()
 
     return response
+
 
 def exportPcPDF(request, value):
     pc = Pc.objects.get(id=value)
@@ -2609,9 +2788,10 @@ def exportPcPDF(request, value):
     response['Content-Disposition'] = 'attachment; filename="{}"'.format(pdfname)
     story = []
     buff = BytesIO()
-    doc = SimpleDocTemplate(buff, pagesize=landscape(A4), rightMargin=0.25*inch, leftMargin=0.25*inch, topMargin=1.4*inch, bottomMargin=0.5*inch, title=pdfname)
-    styleSheet=getSampleStyleSheet()
-    
+    doc = SimpleDocTemplate(buff, pagesize=landscape(A4), rightMargin=0.25 * inch, leftMargin=0.25 * inch,
+                            topMargin=1.4 * inch, bottomMargin=0.5 * inch, title=pdfname)
+    styleSheet = getSampleStyleSheet()
+
     story.append(Spacer(1, 16))
     if pc.claim_no:
         claimno = pc.claim_no
@@ -2636,59 +2816,88 @@ def exportPcPDF(request, value):
     else:
         qpo_no = ""
     pcindata = [
-        [Paragraph('''<para align=left><font size=10><b>To: </b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.company_name)), "", "", "" , Paragraph('''<para align=center><font size=16><b>PROGRESS CLAIM</b></font></para>''')],
-        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)),"", "", "" , ""],
-        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "" ,"", "", Paragraph('''<para align=left><font size=10>Pc No: %s</font></para>''' % (pc.pc_no))],
-        ["", "", "" ,"", "", Paragraph('''<para align=left><font size=10>Project No.: %s</font></para>''' % (project.proj_id))],
-        [Paragraph('''<para align=left><font size=10><b>Attn :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.contact_person.salutation + " " + project.contact_person.contact_person)),Paragraph('''<para align=left><font size=10><b>Email :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.email)), "", Paragraph('''<para align=left><font size=10>Sales: %s</font></para>''' % (qsale_person))],
-        [Paragraph('''<para align=left><font size=10><b>Tel :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.tel)), Paragraph('''<para align=left><font size=10><b>Fax :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.fax)), "", Paragraph('''<para align=left><font size=10>Terms: %s Days</font></para>''' % (qterms))],
-        ["", "", "" ,"", "", Paragraph('''<para align=left><font size=10>PO No.: %s</font></para>''' % (qpo_no))],
-        [Paragraph('''<para align=left><font size=10><b>Project:</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' %(project.RE)), "" ,"", "", Paragraph('''<para align=left><font size=10>Date Prepared: %s</font></para>''' % (pc.date.strftime("%d/%m/%Y")))],
-        ["", "", "" ,"", "", Paragraph('''<para align=left><font size=10>Prog. Claim No: %s</font></para>''' % (claimno))],
+        [Paragraph('''<para align=left><font size=10><b>To: </b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.company_name)), "", "", "",
+         Paragraph('''<para align=center><font size=16><b>PROGRESS CLAIM</b></font></para>''')],
+        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
+         "", "", ""],
+        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
+         "", "", Paragraph('''<para align=left><font size=10>Pc No: %s</font></para>''' % (pc.pc_no))],
+        ["", "", "", "", "",
+         Paragraph('''<para align=left><font size=10>Project No.: %s</font></para>''' % (project.proj_id))],
+        [Paragraph('''<para align=left><font size=10><b>Attn :</b></font></para>'''), Paragraph(
+            '''<para align=left><font size=10>%s</font></para>''' % (
+                    project.contact_person.salutation + " " + project.contact_person.contact_person)),
+         Paragraph('''<para align=left><font size=10><b>Email :</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.email)), "",
+         Paragraph('''<para align=left><font size=10>Sales: %s</font></para>''' % (qsale_person))],
+        [Paragraph('''<para align=left><font size=10><b>Tel :</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.tel)),
+         Paragraph('''<para align=left><font size=10><b>Fax :</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.fax)), "",
+         Paragraph('''<para align=left><font size=10>Terms: %s Days</font></para>''' % (qterms))],
+        ["", "", "", "", "", Paragraph('''<para align=left><font size=10>PO No.: %s</font></para>''' % (qpo_no))],
+        [Paragraph('''<para align=left><font size=10><b>Project:</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (project.RE)), "", "", "", Paragraph(
+            '''<para align=left><font size=10>Date Prepared: %s</font></para>''' % (pc.date.strftime("%d/%m/%Y")))],
+        ["", "", "", "", "",
+         Paragraph('''<para align=left><font size=10>Prog. Claim No: %s</font></para>''' % (claimno))],
     ]
     pcintable = Table(
         pcindata,
         style=[
-            ('VALIGN',(-1,0),(-1,0),'TOP'),
-            ('ALIGN',(-1,0),(-1,0),'CENTER'),
-            ('SPAN',(-1,0),(-1,1)),
-            ('SPAN',(3,4),(4,4)),
-            ('SPAN',(1,7),(4,7)),
-            ('SPAN',(1,2),(4,2)),
-            ('SPAN',(1,1),(4,1)),
+            ('VALIGN', (-1, 0), (-1, 0), 'TOP'),
+            ('ALIGN', (-1, 0), (-1, 0), 'CENTER'),
+            ('SPAN', (-1, 0), (-1, 1)),
+            ('SPAN', (3, 4), (4, 4)),
+            ('SPAN', (1, 7), (4, 7)),
+            ('SPAN', (1, 2), (4, 2)),
+            ('SPAN', (1, 1), (4, 1)),
         ],
     )
-    pcintable._argW[0]=0.7*inch
-    pcintable._argW[1]=1.28*inch
-    pcintable._argW[2]=0.7*inch
-    pcintable._argW[3]=1.28*inch
-    pcintable._argW[4]=4.568*inch
-    pcintable._argW[5]=2.27*inch
-    pcintable._argH[0]=0.2*inch
-    pcintable._argH[1]=0.2*inch
-    pcintable._argH[2]=0.2*inch
-    pcintable._argH[3]=0.2*inch
-    pcintable._argH[4]=0.2*inch
-    pcintable._argH[5]=0.2*inch
-    pcintable._argH[6]=0.2*inch
-    pcintable._argH[7]=0.2*inch
-    pcintable._argH[8]=0.2*inch
+    pcintable._argW[0] = 0.7 * inch
+    pcintable._argW[1] = 1.28 * inch
+    pcintable._argW[2] = 0.7 * inch
+    pcintable._argW[3] = 1.28 * inch
+    pcintable._argW[4] = 4.568 * inch
+    pcintable._argW[5] = 2.27 * inch
+    pcintable._argH[0] = 0.2 * inch
+    pcintable._argH[1] = 0.2 * inch
+    pcintable._argH[2] = 0.2 * inch
+    pcintable._argH[3] = 0.2 * inch
+    pcintable._argH[4] = 0.2 * inch
+    pcintable._argH[5] = 0.2 * inch
+    pcintable._argH[6] = 0.2 * inch
+    pcintable._argH[7] = 0.2 * inch
+    pcintable._argH[8] = 0.2 * inch
     story.append(pcintable)
     story.append(Spacer(1, 10))
-    pc_data= [
-        [Paragraph('''<para align=center><font size=10><b>S/N</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>Description</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>QTY</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>UOM</b></font></para>'''),Paragraph('''<para align=center><font size=10><b>Percentage</b></font></para>'''), Paragraph('''<para align=center spaceb=2><font size=10><b>Unit Rate</b></font></para>'''),
-        Paragraph('''<para align=center spaceb=2><font size=10><b>Sub</b></font><br/><font size=10><b>Amount</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>Current Claim</b></font></para>'''), "",Paragraph('''<para align=center><font size=10><b>Cumulative Claim</b></font></para>'''), ""
-        ],
-        ["", "", "", "", "", "","",
-        Paragraph('''<para align=center spaceb=2><font size=10><b>Work Done</b></font><br/><font size=10><b>(Qty)</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>Total Amount</b></font></para>'''),
-        Paragraph('''<para align=center spaceb=2><font size=10><b>Work Done</b></font><br/><font size=10><b>(Qty)</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>Total Amount</b></font></para>''')
-        ],
+    pc_data = [
+        [Paragraph('''<para align=center><font size=10><b>S/N</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>Description</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>QTY</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>UOM</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>Percentage</b></font></para>'''),
+         Paragraph('''<para align=center spaceb=2><font size=10><b>Unit Rate</b></font></para>'''),
+         Paragraph(
+             '''<para align=center spaceb=2><font size=10><b>Sub</b></font><br/><font size=10><b>Amount</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>Current Claim</b></font></para>'''), "",
+         Paragraph('''<para align=center><font size=10><b>Cumulative Claim</b></font></para>'''), ""
+         ],
+        ["", "", "", "", "", "", "",
+         Paragraph(
+             '''<para align=center spaceb=2><font size=10><b>Work Done</b></font><br/><font size=10><b>(Qty)</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>Total Amount</b></font></para>'''),
+         Paragraph(
+             '''<para align=center spaceb=2><font size=10><b>Work Done</b></font><br/><font size=10><b>(Qty)</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>Total Amount</b></font></para>''')
+         ],
     ]
     pcitems = PcItem.objects.filter(pc_id=value)
     total_pcworkdone_qty = 0
     index = 1
     if pcitems.exists():
-        
+
         for pcitem in pcitems:
             total_pcworkdone_qty += float(pcitem.done_qty) * float(pcitem.price)
             temp_data = []
@@ -2759,86 +2968,93 @@ def exportPcPDF(request, value):
             pc_data,
             style=[
                 ('BACKGROUND', (0, 0), (-1, 1), colors.lavender),
-                ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
-                ('ALIGN',(0,0),(-1,-1),'CENTER'),
-                ('SPAN',(0,0),(0,1)),
-                ('SPAN',(1,0),(1,1)),
-                ('SPAN',(2,0),(2,1)),
-                ('SPAN',(3,0),(3,1)),
-                ('SPAN',(4,0),(4,1)),
-                ('SPAN',(5,0),(5,1)),
-                ('SPAN',(6,0),(6,1)),
-                ('SPAN',(7,0),(8,0)),
-                ('SPAN',(9,0),(10,0)),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('SPAN', (0, 0), (0, 1)),
+                ('SPAN', (1, 0), (1, 1)),
+                ('SPAN', (2, 0), (2, 1)),
+                ('SPAN', (3, 0), (3, 1)),
+                ('SPAN', (4, 0), (4, 1)),
+                ('SPAN', (5, 0), (5, 1)),
+                ('SPAN', (6, 0), (6, 1)),
+                ('SPAN', (7, 0), (8, 0)),
+                ('SPAN', (9, 0), (10, 0)),
             ],
         )
     else:
-        pc_data.append(["No data available in table", "","","", "", "", "", "","", "",""])
+        pc_data.append(["No data available in table", "", "", "", "", "", "", "", "", "", ""])
         pctable = Table(
             pc_data,
             style=[
                 ('BACKGROUND', (0, 0), (-1, 1), colors.lavender),
-                ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
-                ('ALIGN',(0,0),(-1,-1),'CENTER'),
-                ('SPAN',(0,0),(0,1)),
-                ('SPAN',(1,0),(1,1)),
-                ('SPAN',(2,0),(2,1)),
-                ('SPAN',(3,0),(3,1)),
-                ('SPAN',(4,0),(4,1)),
-                ('SPAN',(5,0),(5,1)),
-                ('SPAN',(6,0),(6,1)),
-                ('SPAN',(7,0),(8,0)),
-                ('SPAN',(9,0),(10,0)),
-                ('SPAN',(0,2),(-1,-1)),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('SPAN', (0, 0), (0, 1)),
+                ('SPAN', (1, 0), (1, 1)),
+                ('SPAN', (2, 0), (2, 1)),
+                ('SPAN', (3, 0), (3, 1)),
+                ('SPAN', (4, 0), (4, 1)),
+                ('SPAN', (5, 0), (5, 1)),
+                ('SPAN', (6, 0), (6, 1)),
+                ('SPAN', (7, 0), (8, 0)),
+                ('SPAN', (9, 0), (10, 0)),
+                ('SPAN', (0, 2), (-1, -1)),
             ],
         )
-        pctable._argH[2]=0.4*inch
-        
-    pctable._argW[0]=0.40*inch
-    pctable._argW[1]=2.888*inch
-    pctable._argW[2]=0.60*inch
-    pctable._argW[3]=0.60*inch
-    pctable._argW[4]=1.0*inch
-    pctable._argW[5]=0.60*inch
-    pctable._argW[6]=0.70*inch
-    pctable._argW[7]=1.0*inch
-    pctable._argW[8]=1.0*inch
-    pctable._argW[9]=1.0*inch
-    pctable._argW[10]=1.0*inch
+        pctable._argH[2] = 0.4 * inch
+
+    pctable._argW[0] = 0.40 * inch
+    pctable._argW[1] = 2.888 * inch
+    pctable._argW[2] = 0.60 * inch
+    pctable._argW[3] = 0.60 * inch
+    pctable._argW[4] = 1.0 * inch
+    pctable._argW[5] = 0.60 * inch
+    pctable._argW[6] = 0.70 * inch
+    pctable._argW[7] = 1.0 * inch
+    pctable._argW[8] = 1.0 * inch
+    pctable._argW[9] = 1.0 * inch
+    pctable._argW[10] = 1.0 * inch
     story.append(pctable)
     story.append(Spacer(1, 10))
     if len(pc_data) < 4:
         story.append(PageBreak())
         story.append(Spacer(1, 15))
-    style_sign = ParagraphStyle(name='left',fontSize=10, parent=styleSheet['Normal'])
+    style_sign = ParagraphStyle(name='left', fontSize=10, parent=styleSheet['Normal'])
     if pc.less_previous_claim:
         less_previous_claim = pc.less_previous_claim
         pccurrent = Table(
             [
-                [Paragraph('''<para align=left><font size=10><b>Current Claim Amount:</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % ("$ " + '%.2f' % (total_pcworkdone_qty * 1.07)))],
-                [Paragraph('''<para align=left><font size=10><b>Less Previous Claim:</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % ("$ " + '%.2f' % float(less_previous_claim)))]
+                [Paragraph('''<para align=left><font size=10><b>Current Claim Amount:</b></font></para>'''), Paragraph(
+                    '''<para align=left><font size=10>%s</font></para>''' % (
+                            "$ " + '%.2f' % (total_pcworkdone_qty * 1.07)))],
+                [Paragraph('''<para align=left><font size=10><b>Less Previous Claim:</b></font></para>'''), Paragraph(
+                    '''<para align=left><font size=10>%s</font></para>''' % (
+                            "$ " + '%.2f' % float(less_previous_claim)))]
             ],
             style=[
-                ('VALIGN',(0,0),(1,0),'MIDDLE'),
-                ('ALIGN',(0,0),(1,0),'LEFT'),
+                ('VALIGN', (0, 0), (1, 0), 'MIDDLE'),
+                ('ALIGN', (0, 0), (1, 0), 'LEFT'),
             ],
         )
     else:
         less_previous_claim = ""
         pccurrent = Table(
             [
-                [Paragraph('''<para align=left><font size=10><b>Current Claim Amount:</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % ("$ " + '%.2f' % (total_pcworkdone_qty * 1.07)))],
-                [Paragraph('''<para align=left><font size=10><b>Less Previous Claim:</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (""))]
+                [Paragraph('''<para align=left><font size=10><b>Current Claim Amount:</b></font></para>'''), Paragraph(
+                    '''<para align=left><font size=10>%s</font></para>''' % (
+                            "$ " + '%.2f' % (total_pcworkdone_qty * 1.07)))],
+                [Paragraph('''<para align=left><font size=10><b>Less Previous Claim:</b></font></para>'''),
+                 Paragraph('''<para align=left><font size=10>%s</font></para>''' % (""))]
             ],
             style=[
-                ('VALIGN',(0,0),(1,0),'MIDDLE'),
-                ('ALIGN',(0,0),(1,0),'LEFT'),
+                ('VALIGN', (0, 0), (1, 0), 'MIDDLE'),
+                ('ALIGN', (0, 0), (1, 0), 'LEFT'),
             ],
         )
-    pccurrent._argW[0]=1.888*inch
-    pccurrent._argW[1]=8.9*inch
+    pccurrent._argW[0] = 1.888 * inch
+    pccurrent._argW[1] = 8.9 * inch
     story.append(pccurrent)
     story.append(Spacer(1, 10))
     sign_title1 = '''
@@ -2852,35 +3068,40 @@ def exportPcPDF(request, value):
         </para>
     '''
     if request.user.signature:
-        sign_logo = Image('http://' + domain + request.user.signature.url, width=0.8*inch, height=0.8*inch, hAlign='LEFT')
+        sign_logo = Image('http://' + domain + request.user.signature.url, width=0.8 * inch, height=0.8 * inch,
+                          hAlign='LEFT')
     else:
         sign_logo = Image('http://' + domain + '/static/assets/images/logo.png', hAlign='LEFT')
-    pctable1=Table(
+    pctable1 = Table(
         [
-            [Paragraph('''<para align=left><font size=12><b>Prepared By:</b></font></para>'''),"", "", Paragraph('''<para align=left><font size=12><b>Certified By:</b></font></para>''')],
+            [Paragraph('''<para align=left><font size=12><b>Prepared By:</b></font></para>'''), "", "",
+             Paragraph('''<para align=left><font size=12><b>Certified By:</b></font></para>''')],
         ],
         style=[
-            ('VALIGN',(0,0),(0,-1),'TOP'),
+            ('VALIGN', (0, 0), (0, -1), 'TOP'),
         ],
     )
-    pctable1._argW[0]=2.394*inch
-    pctable1._argW[1]=2.50*inch
-    pctable1._argW[2]=2.50*inch
-    pctable1._argW[3]=3.394*inch
+    pctable1._argW[0] = 2.394 * inch
+    pctable1._argW[1] = 2.50 * inch
+    pctable1._argW[2] = 2.50 * inch
+    pctable1._argW[3] = 3.394 * inch
     story.append(pctable1)
-    pctable2=Table(
+    pctable2 = Table(
         [
-            [Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (request.user.first_name)),"", Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''), Paragraph('''<para align=left><font size=9></font></para>''')]
+            [Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''),
+             Paragraph('''<para align=left><font size=9>%s</font></para>''' % (request.user.first_name)), "",
+             Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''),
+             Paragraph('''<para align=left><font size=9></font></para>''')]
         ],
         style=[
-            ('VALIGN',(0,0),(0,-1),'TOP'),
+            ('VALIGN', (0, 0), (0, -1), 'TOP'),
         ],
     )
-    pctable2._argW[0]=0.8*inch
-    pctable2._argW[1]=2.994*inch
-    pctable2._argW[2]=3.6*inch
-    pctable2._argW[3]=0.8*inch
-    pctable2._argW[4]=2.594*inch
+    pctable2._argW[0] = 0.8 * inch
+    pctable2._argW[1] = 2.994 * inch
+    pctable2._argW[2] = 3.6 * inch
+    pctable2._argW[3] = 0.8 * inch
+    pctable2._argW[4] = 2.594 * inch
     story.append(Spacer(1, 10))
     story.append(pctable2)
     if pc.uploaded_by:
@@ -2890,29 +3111,30 @@ def exportPcPDF(request, value):
             auto_sign = Image('http://' + domain + '/static/assets/images/logo.png', hAlign='LEFT')
     else:
         auto_sign = Image('http://' + domain + '/static/assets/images/logo.png', hAlign='LEFT')
-    pctable3=Table(
+    pctable3 = Table(
         [
             [Paragraph(sign_title1, style_sign), "", "", Paragraph(sign_title2, style_sign), ""],
-            ["", sign_logo,"", "", ""]
+            ["", sign_logo, "", "", ""]
         ],
         style=[
-            ('VALIGN',(0,0),(-1,-1),'TOP'),
-            ('SPAN',(3,1),(4,-1)),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('SPAN', (3, 1), (4, -1)),
         ],
     )
     story.append(Spacer(1, 10))
-    pctable3._argW[0]=1.0*inch
-    pctable3._argW[1]=2.794*inch
-    pctable3._argW[2]=3.6*inch
-    pctable3._argW[3]=1.0*inch
-    pctable3._argW[4]=2.394*inch
+    pctable3._argW[0] = 1.0 * inch
+    pctable3._argW[1] = 2.794 * inch
+    pctable3._argW[2] = 3.6 * inch
+    pctable3._argW[3] = 1.0 * inch
+    pctable3._argW[4] = 2.394 * inch
     story.append(pctable3)
-   
-    doc.build(story,canvasmaker=LandScapeNumberedCanvas)
+
+    doc.build(story, canvasmaker=LandScapeNumberedCanvas)
     response.write(buff.getvalue())
     buff.close()
 
     return response
+
 
 def exportDoPDF(request, value):
     do = Do.objects.get(id=value)
@@ -2925,18 +3147,22 @@ def exportDoPDF(request, value):
     currentdate = datetime.date.today().strftime("%d-%m-%Y")
     pdfname = do.do_no + ".pdf"
     response['Content-Disposition'] = 'attachment; filename="{}"'.format(pdfname)
-    
+
     story = []
-    data= [
-        [Paragraph('''<para align=center><font size=10><b>S/N</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>Description</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>UOM</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>QTY</b></font></para>''')],
+    data = [
+        [Paragraph('''<para align=center><font size=10><b>S/N</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>Description</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>UOM</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>QTY</b></font></para>''')],
     ]
     buff = BytesIO()
-    doc = SimpleDocTemplate(buff, pagesize=portrait(A4), rightMargin=0.25*inch, leftMargin=0.25*inch, topMargin=1.4*inch, bottomMargin=0.25*inch, title=pdfname)
-    styleSheet=getSampleStyleSheet()
-    
+    doc = SimpleDocTemplate(buff, pagesize=portrait(A4), rightMargin=0.25 * inch, leftMargin=0.25 * inch,
+                            topMargin=1.4 * inch, bottomMargin=0.25 * inch, title=pdfname)
+    styleSheet = getSampleStyleSheet()
+
     doinformation = []
     if do.date:
-        dodate =  do.date.strftime('%d/%m/%Y')
+        dodate = do.date.strftime('%d/%m/%Y')
     else:
         dodate = " "
     if quotation.sale_person:
@@ -2972,7 +3198,7 @@ def exportDoPDF(request, value):
             
         </para>
     ''' % (qsale_person, qterms, qpo_no)
-    
+
     if Quotation.objects.filter(qtt_id__iexact=project.qtt_id).exists():
         quotation = Quotation.objects.get(qtt_id__iexact=project.qtt_id)
         if quotation.company_name.country:
@@ -2987,7 +3213,7 @@ def exportDoPDF(request, value):
             postalcode = quotation.company_name.postal_code
         else:
             postalcode = " "
-            
+
         bill_to2 = '''
             <para align=left>
                 <font size=10>%s</font><br/>
@@ -3006,7 +3232,7 @@ def exportDoPDF(request, value):
             <font size=10>%s</font><br/>
         </para> 
     ''' % (project.company_name)
-    
+
     b_to = '''
         <para align=left>
             <font size=10>Bill To: </font>
@@ -3017,33 +3243,33 @@ def exportDoPDF(request, value):
     information = Table(
         doinformation,
         style=[
-            ('ALIGN',(0,0),(0,0),'LEFT'),
-            ('ALIGN',(1,0),(1,0),'LEFT'),
-            ('VALIGN',(0,0),(-1,0),'BOTTOM'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, 0), 'BOTTOM'),
         ]
     )
-    
-    information._argW[0]=0.8*inch
-    information._argW[1]=3.0*inch
-    information._argW[2]=0.52*inch
-    information._argW[3]=3.0*inch
+
+    information._argW[0] = 0.8 * inch
+    information._argW[1] = 3.0 * inch
+    information._argW[2] = 0.52 * inch
+    information._argW[3] = 3.0 * inch
     story.append(Spacer(1, 16))
     story.append(information)
     doinformation1 = []
-    doinformation1.append(["", Paragraph(bill_to2,do_head), "", Paragraph(do_title2, do_head)])
+    doinformation1.append(["", Paragraph(bill_to2, do_head), "", Paragraph(do_title2, do_head)])
     information1 = Table(
         doinformation1,
         style=[
-            ('ALIGN',(0,0),(0,0),'LEFT'),
-            ('ALIGN',(1,0),(1,0),'LEFT'),
-            ('VALIGN',(0,0),(1,0),'TOP')
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (1, 0), 'TOP')
         ]
     )
-    
-    information1._argW[0]=0.8*inch
-    information1._argW[1]=3.0*inch
-    information1._argW[2]=1.52*inch
-    information1._argW[3]=2.0*inch
+
+    information1._argW[0] = 0.8 * inch
+    information1._argW[1] = 3.0 * inch
+    information1._argW[2] = 1.52 * inch
+    information1._argW[3] = 2.0 * inch
     story.append(information1)
     if do.ship_to:
         shipto = do.ship_to
@@ -3060,21 +3286,21 @@ def exportDoPDF(request, value):
         </para>
     '''
     shipinformation = []
-    shipinformation.append([Paragraph(s_to), Paragraph(ship_to, do_head),"", Paragraph(do_title3, do_head)])
+    shipinformation.append([Paragraph(s_to), Paragraph(ship_to, do_head), "", Paragraph(do_title3, do_head)])
     sinformation = Table(
         shipinformation,
         style=[
-            ('ALIGN',(0,0),(1,0),'LEFT'),
-            ('VALIGN',(0,0),(-1,-1),'TOP'),
+            ('ALIGN', (0, 0), (1, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]
     )
-    
-    sinformation._argW[0]=0.8*inch
-    sinformation._argW[1]=3.0*inch
-    sinformation._argW[2]=1.52*inch
-    sinformation._argW[3]=2.0*inch
+
+    sinformation._argW[0] = 0.8 * inch
+    sinformation._argW[1] = 3.0 * inch
+    sinformation._argW[2] = 1.52 * inch
+    sinformation._argW[3] = 2.0 * inch
     story.append(sinformation)
-    
+
     infordetail = []
     do_attn = '''
         <para align=left>
@@ -3086,23 +3312,23 @@ def exportDoPDF(request, value):
             <font size=10>Tel:  %s</font>
         </para>
     ''' % (project.tel)
-    
+
     infordetail.append([Paragraph(do_attn), Paragraph(project_tel), ""])
     infor = Table(
         infordetail,
         style=[
-            ('ALIGN',(0,0),(0,0),'LEFT'),
-            ('ALIGN',(1,0),(1,0),'LEFT'),
-            ('VALIGN',(0,0),(-1,0),'TOP'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, 0), 'TOP'),
         ]
     )
-    
-    infor._argW[0]=2.0*inch
-    infor._argW[1]=2.5*inch
-    infor._argW[2]=2.82*inch
-    infor._argH[0]=0.32*inch
+
+    infor._argW[0] = 2.0 * inch
+    infor._argW[1] = 2.5 * inch
+    infor._argW[2] = 2.82 * inch
+    infor._argH[0] = 0.32 * inch
     story.append(infor)
-    story.append(Spacer(1,15))
+    story.append(Spacer(1, 15))
     if doitems.exists():
         index = 1
         for doitem in doitems:
@@ -3119,53 +3345,55 @@ def exportDoPDF(request, value):
             temp_data.append(str(doitem.qty))
             data.append(temp_data)
             index += 1
-        exportD=Table(
+        exportD = Table(
             data,
             style=[
                 ('BACKGROUND', (0, 0), (5, 0), colors.lavender),
-                ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('ALIGN',(0,0),(-1,-1),'CENTER'),
-                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ],
         )
     else:
-        data.append(["No data available in table", "", "", ""]) 
+        data.append(["No data available in table", "", "", ""])
         exportD = Table(
             data,
             style=[
                 ('BACKGROUND', (0, 0), (-1, 0), colors.lavender),
-                ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
-                ('ALIGN',(0,0),(-1,-1),'CENTER'),
-                ('SPAN',(0,1),(-1,-1)),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('SPAN', (0, 1), (-1, -1)),
             ],
         )
-        exportD._argH[1]=0.3*inch
+        exportD._argH[1] = 0.3 * inch
 
-    
-    exportD._argW[0]=0.40*inch
-    exportD._argW[1]=5.456*inch
-    exportD._argW[2]=0.732*inch
-    exportD._argW[3]=0.732*inch
+    exportD._argW[0] = 0.40 * inch
+    exportD._argW[1] = 5.456 * inch
+    exportD._argW[2] = 0.732 * inch
+    exportD._argW[3] = 0.732 * inch
     story.append(exportD)
     story.append(Spacer(1, 15))
-    style_condition = ParagraphStyle(name='left',fontSize=9, parent=styleSheet['Normal'], leftIndent=20, leading=15)
+    style_condition = ParagraphStyle(name='left', fontSize=9, parent=styleSheet['Normal'], leftIndent=20, leading=15)
     story.append(Paragraph("Received the above Goods in Good Order & Condition", style_condition))
-    story.append(Paragraph("Please be informed that unless payment is received in full, CNI Technology Pte Ltd will remain as the rightful owner of the delivered equipment(s)/material(s) on site.", style_condition))
-    
+    story.append(Paragraph(
+        "Please be informed that unless payment is received in full, CNI Technology Pte Ltd will remain as the rightful owner of the delivered equipment(s)/material(s) on site.",
+        style_condition))
+
     story.append(Spacer(1, 10))
     if len(data) > 6:
         story.append(PageBreak())
         story.append(Spacer(1, 15))
     dosignature = DOSignature.objects.filter(do_id=value)
-    
+
     if dosignature.exists():
         dosign_data = DOSignature.objects.get(do_id=value)
         sign_name = dosign_data.name
         sign_nric = dosign_data.nric
         sign_date = dosign_data.update_date.strftime('%d/%m/%Y')
-        sign_logo = Image('http://' + domain + dosign_data.signature_image.url, width=1.2*inch, height=0.8*inch, hAlign='LEFT')
-            
+        sign_logo = Image('http://' + domain + dosign_data.signature_image.url, width=1.2 * inch, height=0.8 * inch,
+                          hAlign='LEFT')
+
     else:
         sign_name = ""
         sign_nric = ""
@@ -3173,13 +3401,14 @@ def exportDoPDF(request, value):
         sign_logo = ""
     if do.created_by:
         if do.created_by.signature:
-            auto_sign = Image('http://' + domain + do.created_by.signature.url,width=0.8*inch, height=0.8*inch, hAlign='LEFT')
+            auto_sign = Image('http://' + domain + do.created_by.signature.url, width=0.8 * inch, height=0.8 * inch,
+                              hAlign='LEFT')
         else:
             auto_sign = Image('http://' + domain + '/static/assets/images/logo.png', hAlign='LEFT')
     else:
         auto_sign = Image('http://' + domain + '/static/assets/images/logo.png', hAlign='LEFT')
 
-    style_sign = ParagraphStyle(name='left',fontSize=10, parent=styleSheet['Normal'])
+    style_sign = ParagraphStyle(name='left', fontSize=10, parent=styleSheet['Normal'])
     sign_title1 = '''
         <para align=left>
             <font size=10><b>Signature: </b></font>
@@ -3190,61 +3419,68 @@ def exportDoPDF(request, value):
             <font size=10><b>Authorised  Signature: </b></font>
         </para>
     '''
-    dotable1=Table(
+    dotable1 = Table(
         [
-            [Paragraph('''<para align=left><font size=12><b>For Customers:</b></font></para>'''), Paragraph('''<para align=right><font size=12><b>For CNI TECHNOLOGY PTE LTD:</b></font></para>''')],
+            [Paragraph('''<para align=left><font size=12><b>For Customers:</b></font></para>'''),
+             Paragraph('''<para align=right><font size=12><b>For CNI TECHNOLOGY PTE LTD:</b></font></para>''')],
         ],
         style=[
-            ('VALIGN',(0,0),(0,-1),'TOP'),
+            ('VALIGN', (0, 0), (0, -1), 'TOP'),
         ],
     )
-    dotable1._argW[0]=3.66*inch
-    dotable1._argW[1]=3.66*inch
+    dotable1._argW[0] = 3.66 * inch
+    dotable1._argW[1] = 3.66 * inch
     story.append(dotable1)
-    dotable3=Table(
+    dotable3 = Table(
         [
-            [Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_name)), "",Paragraph(sign_title2, style_sign), ""],
+            [Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''),
+             Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_name)), "",
+             Paragraph(sign_title2, style_sign), ""],
             [Paragraph(sign_title1, style_sign), "", "", auto_sign, ""],
-            ["", sign_logo,"", "", ""]
+            ["", sign_logo, "", "", ""]
         ],
         style=[
-            ('VALIGN',(0,0),(-1,-1),'TOP'),
-            ('SPAN',(3,0),(-1,0)),
-            ('SPAN',(3,1),(4,-1)),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('SPAN', (3, 0), (-1, 0)),
+            ('SPAN', (3, 1), (4, -1)),
         ],
     )
     story.append(Spacer(1, 10))
-    dotable3._argW[0]=1.0*inch
-    dotable3._argW[1]=1.83*inch
-    dotable3._argW[2]=1.63*inch
-    dotable3._argW[3]=1.0*inch
-    dotable3._argW[4]=1.83*inch
+    dotable3._argW[0] = 1.0 * inch
+    dotable3._argW[1] = 1.83 * inch
+    dotable3._argW[2] = 1.63 * inch
+    dotable3._argW[3] = 1.0 * inch
+    dotable3._argW[4] = 1.83 * inch
     story.append(dotable3)
-    dotable4=Table(
+    dotable4 = Table(
         [
-            [Paragraph('''<para align=left spaceb=2><font size=9><b>NRIC</b></font><br/><font size=9><b>(last 3 digits):</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_nric))],
-            [Paragraph('''<para align=left><font size=9><b>Date:</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_date))]
+            [Paragraph(
+                '''<para align=left spaceb=2><font size=9><b>NRIC</b></font><br/><font size=9><b>(last 3 digits):</b></font></para>'''),
+                Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_nric))],
+            [Paragraph('''<para align=left><font size=9><b>Date:</b></font></para>'''),
+             Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_date))]
         ],
         style=[
-            ('VALIGN',(1,0),(1,-1),'MIDDLE'),
+            ('VALIGN', (1, 0), (1, -1), 'MIDDLE'),
         ],
     )
-    dotable4._argW[0]=1.0*inch
-    dotable4._argW[1]=6.32*inch
+    dotable4._argW[0] = 1.0 * inch
+    dotable4._argW[1] = 6.32 * inch
     story.append(Spacer(1, 10))
     story.append(dotable4)
-    doc.build(story,canvasmaker=NumberedCanvas)
-    
+    doc.build(story, canvasmaker=NumberedCanvas)
+
     response.write(buff.getvalue())
     buff.close()
     return response
+
 
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         canvas.Canvas.__init__(self, *args, **kwargs)
         self._saved_page_states = []
-        self.PAGE_HEIGHT=defaultPageSize[1]
-        self.PAGE_WIDTH=defaultPageSize[0]
+        self.PAGE_HEIGHT = defaultPageSize[1]
+        self.PAGE_WIDTH = defaultPageSize[0]
         self.domain = settings.HOST_NAME
         self.logo = ImageReader('http://' + self.domain + '/static/assets/images/printlogo.png')
 
@@ -3270,15 +3506,16 @@ class NumberedCanvas(canvas.Canvas):
         self.drawString(150, self.PAGE_HEIGHT - 80, "Tel.6747 6169 Fax.7647 5669")
         self.drawString(150, self.PAGE_HEIGHT - 95, "RCB No.201318779M")
         self.setFont("Times-Roman", 9)
-        self.drawRightString(self.PAGE_WIDTH/2.0 + 10, 0.35 * inch,
-            "Page %d of %d" % (self._pageNumber, page_count))
+        self.drawRightString(self.PAGE_WIDTH / 2.0 + 10, 0.35 * inch,
+                             "Page %d of %d" % (self._pageNumber, page_count))
+
 
 class LandScapeNumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         canvas.Canvas.__init__(self, *args, **kwargs)
         self._saved_page_states = []
-        self.PAGE_HEIGHT=defaultPageSize[0]
-        self.PAGE_WIDTH=defaultPageSize[1]
+        self.PAGE_HEIGHT = defaultPageSize[0]
+        self.PAGE_WIDTH = defaultPageSize[1]
         self.domain = settings.HOST_NAME
         self.logo = ImageReader('http://' + self.domain + '/static/assets/images/printlogo.png')
 
@@ -3304,5 +3541,5 @@ class LandScapeNumberedCanvas(canvas.Canvas):
         self.drawString(150, self.PAGE_HEIGHT - 80, "Tel.6747 6169 Fax.7647 5669")
         self.drawString(150, self.PAGE_HEIGHT - 95, "RCB No.201318779M")
         self.setFont("Times-Roman", 9)
-        self.drawRightString(self.PAGE_WIDTH/2.0 + 10, 0.35 * inch,
-            "Page %d of %d" % (self._pageNumber, page_count))
+        self.drawRightString(self.PAGE_WIDTH / 2.0 + 10, 0.35 * inch,
+                             "Page %d of %d" % (self._pageNumber, page_count))
