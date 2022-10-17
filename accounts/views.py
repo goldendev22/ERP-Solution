@@ -1200,8 +1200,10 @@ def ajax_otcalculation_summary(request):
         current_month = datetime.datetime.today().month
         holiday_cnt = Holiday.objects.filter(date__year=current_year, date__month=current_month).count()
 
-        str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.approved_hour, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F, tb_user AS U WHERE F.emp_no = U.empid ORDER BY F.checkin_time ASC"
-
+        str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.approved_hour, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date) " \
+                    "AND YEAR(W.checkin_time) = {0} AND  MONTH(W.checkin_time) = {1}"\
+                    ") AS F, tb_user AS U WHERE F.emp_no = U.empid ORDER BY F.checkin_time ASC".format(str(current_year) ,str(current_month))
+        print(str_query)
 
         query_ots = WorkLog.objects.raw(str_query)
         for q in query_ots:
