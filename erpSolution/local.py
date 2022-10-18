@@ -55,6 +55,33 @@ EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD")
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
+INSTALLED_APPS = [
+    'django_crontab',
+    'admin_interface',
+    'colorfield',
+    'cities_light',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'import_export',
+    'notifications',
+    'accounts',
+    'dashboard',
+    'expenseclaim',
+    'sales',
+    'project',
+    'inventory',
+    'userprofile',
+    'maintenance',
+    'corsheaders',
+    'siteprogress',
+    'toolbox',
+    'jsignature',
+]
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
@@ -83,4 +110,6 @@ CORS_ALLOW_METHODS = [
 ]
 
 
-
+CRONJOBS = [
+    ('*/2 * * * *', 'erpSolution.dashboard.schedule_cron_job')
+]

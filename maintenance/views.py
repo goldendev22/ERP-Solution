@@ -1,4 +1,5 @@
 import datetime
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -17,7 +18,6 @@ from django.db.models import Q
 from dateutil import parser as date_parser
 import pandas as pd
 import os
-
 from sales.models import Company, Contact, Quotation, Scope
 
 from reportlab.platypus import SimpleDocTemplate, Table, Image, Spacer, TableStyle, PageBreak, Paragraph
@@ -31,6 +31,7 @@ from io import BytesIO
 from reportlab.lib.pagesizes import A4, landscape, portrait
 from django.core.files.base import ContentFile
 
+
 # Create your views here.
 @method_decorator(login_required, name='dispatch')
 class MaintenanceView(ListView):
@@ -43,6 +44,8 @@ class MaintenanceView(ListView):
         context['contacts'] = User.objects.all()
         return context
 
+def task():
+    print("-----------maintenance task-----------------")
 
 @ajax_login_required
 def maintenanceadd(request):
@@ -91,6 +94,7 @@ def maintenanceadd(request):
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def getMaintenanace(request):

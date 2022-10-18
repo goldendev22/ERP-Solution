@@ -62,6 +62,7 @@ def progressLogFilterList(request):
         prject = Project.objects.get(id=proj_id)
         quotation = Quotation.objects.get(qtt_id__iexact=prject.qtt_id)
         projectitems = Scope.objects.filter(quotation_id=quotation.id, parent=None)
+        subtotal = 0
         for obj in projectitems:
             obj.childs = Scope.objects.filter(quotation_id=quotation.id, parent_id=obj.id)
             obj.cumulativeqty = SiteProgress.objects.filter(project_id=proj_id,description__iexact=obj.description).aggregate(Sum('qty'))['qty__sum']
@@ -82,8 +83,9 @@ def progressLogFilterList(request):
                     subobj.cumulativeperc = 0
 
                 obj.cumulativeperc += tempObjperc * subobj.cumulativeperc / 100
+            subtotal += obj.cumulativeperc
 
-        return render(request, 'siteprogress/ajax-progresslogs.html', {'progresslogs': projectitems})
+        return render(request, 'siteprogress/ajax-progresslogs.html', {'progresslogs': projectitems, 'subtotal': subtotal})
 
 @ajax_login_required
 def ajax_get_uom_name(request):

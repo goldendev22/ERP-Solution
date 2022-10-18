@@ -494,7 +494,7 @@
                                                 <td class="align-middle">{{projectitem.description|default_if_none:""}}</td>
                                                 <td class="align-middle">{{projectitem.uom|default_if_none:""}}</td>
                                                 <td class="align-middle">{{projectitem.qty|default_if_none:""}}</td>
-                                                <td class="align-middle">{{projectitem.allocation_perc|default_if_none:0}}</td>
+                                                <td class="align-middle">{{projectitem.allocation_perc|floatformat:2|default_if_none:0}}</td>
                                                 <td class="align-middle">{{projectitem.cumulativeqty|default_if_none:""}}</td>
                                                 <td class="align-middle">{{projectitem.cumulativeperc|floatformat:2|default_if_none:0}} %</td>
                                             </tr>
@@ -520,6 +520,7 @@
                                         </tbody>
                                         {% endif %}
                                     {% endfor %}
+
                                     {% if projectitems %}
                                     <tbody>
                                         <tr>
@@ -532,7 +533,6 @@
                                             <td class="align-middle">{{subtotal|floatformat:2}} %</td>     
                                         </tr>
                                     </tbody>
-                                        
                                     {% endif %}
                                 </table>
                             </div>
