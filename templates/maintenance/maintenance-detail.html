@@ -418,7 +418,7 @@
                                             <td class="align-middle">{{forloop.counter}}</td>
                                             <td class="align-middle">{{schedule.date|date:"d M, Y"|default_if_none:""}}</td>
                                             <td class="align-middle">{{schedule.description|default_if_none:""}}</td> 
-                                            <td class="align-middle">{{schedule.reminder|default_if_none:""}}</td>
+                                            <td class="align-middle">{{schedule.get_reminder_str|default_if_none:""}}</td>
                                             <td class="align-middle">{{schedule.remark|default_if_none:""}}</td>
 
                                             <td class="align-middle">
@@ -691,11 +691,11 @@
                         <div class="col-md-8">
                             <select class="form-control schedulereminder" id="schedulereminder" required>
                                 <option value="">Select Reminder..</option>
-                                <option value="Before 1 Day">Before 1 Day</option>
-                                <option value="Before 3 Days">Before 3 Days</option>
-                                <option value="Before 1 Week">Before 1 Week</option>
-                                <option value="Before 2 Weeks">Before 2 Weeks</option>
-                                <option value="Before 1 Month">Before 1 Month</option>
+                                <option value="1">Before 1 Day</option>
+                                <option value="3">Before 3 Days</option>
+                                <option value="7">Before 1 Week</option>
+                                <option value="14">Before 2 Weeks</option>
+                                <option value="30">Before 1 Month</option>
 
                             </select>
                         </div>

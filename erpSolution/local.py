@@ -56,6 +56,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
 INSTALLED_APPS = [
+    'django_apscheduler',
     'django_crontab',
     'admin_interface',
     'colorfield',

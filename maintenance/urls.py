@@ -40,4 +40,3 @@ urlpatterns = [
 
     url(r'^ajax-import-maintenance/$', views.ajax_import_maintenance, name='ajax-import-maintenance'),
 ]
-

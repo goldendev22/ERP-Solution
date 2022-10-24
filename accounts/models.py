@@ -203,6 +203,7 @@ class Holiday(models.Model):
 
 
 class NotificationPrivilege(models.Model):
+    maintenance_reminded = models.BooleanField(blank=True, null=True, default=True)
     project_no_created = models.BooleanField(blank=True, null=True, default=True)
     project_status = models.BooleanField(blank=True, null=True, default=True)
     project_end = models.IntegerField(default=2)

@@ -29,7 +29,9 @@ from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from io import BytesIO
 from reportlab.lib.pagesizes import A4, landscape, portrait
-from django.core.files.base import ContentFile
+from notifications.signals import notify
+from datetime import datetime, timezone
+from pytz import timezone as pytimezone
 
 
 # Create your views here.
@@ -44,8 +46,25 @@ class MaintenanceView(ListView):
         context['contacts'] = User.objects.all()
         return context
 
+
 def task():
-    print("-----------maintenance task-----------------")
+    sender = User.objects.get(role="Managers")
+    maintenance_schedules = Schedule.objects.all()
+    now_date = datetime.now(pytimezone(os.getenv("TIME_ZONE"))).date()
+    for schedule in maintenance_schedules:
+        to_date = schedule.date
+        diff_days = (to_date - now_date).days
+        reminder_days = int(schedule.reminder)
+        if diff_days > 0:
+            if diff_days == reminder_days:
+                # notification send
+                description = 'Maintenance Schedule No : {0} - Maintenance Schedule reminder before {1} days'.format(
+                    schedule.id, schedule.reminder)
+                for receiver in User.objects.all():
+                    if receiver.notificationprivilege.maintenance_reminded:
+                        notify.send(sender, recipient=receiver, verb='Message', level="success",
+                                    description=description)
+
 
 @ajax_login_required
 def maintenanceadd(request):
@@ -69,7 +88,7 @@ def maintenanceadd(request):
                     "status": "Success",
                     "messages": "Company information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already this email is existed!"
@@ -89,7 +108,7 @@ def maintenanceadd(request):
                     "messages": "Maintenance information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
@@ -110,6 +129,7 @@ def getMaintenanace(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def maintenancedelete(request):
     if request.method == "POST":
@@ -119,36 +139,39 @@ def maintenancedelete(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 @method_decorator(login_required, name='dispatch')
 class MaintenanceDetailView(DetailView):
     model = Maintenance
-    template_name="maintenance/maintenance-detail.html"
+    template_name = "maintenance/maintenance-detail.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        content_pk = self.kwargs.get('pk')  
+        content_pk = self.kwargs.get('pk')
         summary = Maintenance.objects.get(id=content_pk)
         context['maintenance'] = summary
         context['maintenance_pk'] = content_pk
         context['contacts'] = Contact.objects.all()
         context['companies'] = Company.objects.all()
         context['uoms'] = Uom.objects.all()
-        context['projects_incharge'] = User.objects.filter(Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
+        context['projects_incharge'] = User.objects.filter(
+            Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
         context['filelist'] = MaintenanceFile.objects.filter(maintenance_id=content_pk)
         context['srlist'] = MainSr.objects.filter(maintenance_id=content_pk)
         quotation = summary.quotation
-        maintenanceitems = Scope.objects.filter(quotation_id=quotation.id,parent=None)
+        maintenanceitems = Scope.objects.filter(quotation_id=quotation.id, parent=None)
         context['maintenanceitems'] = maintenanceitems
-        context["devices"] = Device.objects.filter(maintenance_id=content_pk)  
+        context["devices"] = Device.objects.filter(maintenance_id=content_pk)
         context['suppliers'] = Company.objects.filter(associate="Supplier")
-        context['schedules'] = Schedule.objects.filter(maintenance_id=content_pk)     
-        
+        context['schedules'] = Schedule.objects.filter(maintenance_id=content_pk)
+
         return context
+
 
 @ajax_login_required
 def UpdateMain(request):
     if request.method == "POST":
-        
+
         company_name = request.POST.get('company_name')
         worksite_address = request.POST.get('worksite_address')
         contact_person = request.POST.get('contact_person')
@@ -166,37 +189,38 @@ def UpdateMain(request):
         end_date = request.POST.get('end_date')
         main_status = request.POST.get('main_status')
         mainid = request.POST.get('mainid')
-        
+
         try:
             main = Maintenance.objects.get(id=mainid)
-            
-            main.company_name_id=company_name
-            main.worksite_address=worksite_address
-            main.contact_person_id=contact_person
-            main.email=email
-            main.tel=tel
-            main.fax=fax
-            main.quot_no=quot_no
-            main.main_no=main_no
-            main.proj_incharge=proj_incharge
-            main.site_incharge=site_incharge
-            main.site_tel=site_tel
-            main.start_date=start_date
-            main.end_date=end_date
-            main.main_status=main_status
-            main.RE=RE
+
+            main.company_name_id = company_name
+            main.worksite_address = worksite_address
+            main.contact_person_id = contact_person
+            main.email = email
+            main.tel = tel
+            main.fax = fax
+            main.quot_no = quot_no
+            main.main_no = main_no
+            main.proj_incharge = proj_incharge
+            main.site_incharge = site_incharge
+            main.site_tel = site_tel
+            main.start_date = start_date
+            main.end_date = end_date
+            main.main_status = main_status
+            main.RE = RE
             main.save()
 
             return JsonResponse({
                 "status": "Success",
                 "messages": "Maintenance information updated!"
             })
-        except IntegrityError as e: 
+        except IntegrityError as e:
             print(e)
             return JsonResponse({
                 "status": "Error",
                 "messages": "Error is existed!"
             })
+
 
 @ajax_login_required
 def ajax_add_main_file(request):
@@ -208,20 +232,21 @@ def ajax_add_main_file(request):
             try:
                 MaintenanceFile.objects.create(
                     name=name,
-                    document = request.FILES.get('document'),
+                    document=request.FILES.get('document'),
                     uploaded_by_id=request.user.id,
-                    maintenance_id = maintenanceid,
+                    maintenance_id=maintenanceid,
                     date=datetime.datetime.now().date()
                 )
                 return JsonResponse({
                     "status": "Success",
                     "messages": "Project File information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def deleteMainFile(request):
@@ -232,23 +257,25 @@ def deleteMainFile(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 @ajax_login_required
 def ajax_check_main_srnumber(request):
     if request.method == "POST":
         if MainSr.objects.all().exists():
-            mainsr= MainSr.objects.all().order_by('-sr_no')[0]
+            mainsr = MainSr.objects.all().order_by('-sr_no')[0]
             data = {
                 "status": "exist",
-                "sr_no": mainsr.sr_no.replace('CSR','').split()[0]
+                "sr_no": mainsr.sr_no.replace('CSR', '').split()[0]
             }
-        
+
             return JsonResponse(data)
         else:
             data = {
                 "status": "no exist"
             }
-        
+
             return JsonResponse(data)
+
 
 @ajax_login_required
 def mainsradd(request):
@@ -276,7 +303,7 @@ def mainsradd(request):
                     "status": "Success",
                     "messages": "Service Report information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already SR is existed!"
@@ -296,11 +323,12 @@ def mainsradd(request):
                     "messages": "Service Report information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already SR is existed!"
                 })
+
 
 @ajax_login_required
 def mainsrdocadd(request):
@@ -309,7 +337,7 @@ def mainsrdocadd(request):
         srdocid = request.POST.get('srdocid')
         try:
             mainsr = MainSr.objects.get(id=srdocid)
-            mainsr.uploaded_by_id=request.user.id
+            mainsr.uploaded_by_id = request.user.id
             mainsr.maintenance_id = maintenanceid
             if request.FILES.get('document'):
                 mainsr.document = request.FILES.get('document')
@@ -321,11 +349,12 @@ def mainsrdocadd(request):
                 "messages": "Sr Document uploaded!"
             })
 
-        except IntegrityError as e: 
+        except IntegrityError as e:
             return JsonResponse({
                 "status": "Error",
                 "messages": "Error!"
             })
+
 
 @ajax_login_required
 def deleteMainSR(request):
@@ -336,11 +365,12 @@ def deleteMainSR(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 @method_decorator(login_required, name='dispatch')
 class MainSrDetailView(DetailView):
     model = MainSr
     pk_url_kwarg = 'srpk'
-    template_name="maintenance/service-report-detail.html"
+    template_name = "maintenance/service-report-detail.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -355,18 +385,19 @@ class MainSrDetailView(DetailView):
         context['uoms'] = Uom.objects.all()
         context['service_report'] = service_report
         quotation = summary.quotation
-        #sritems = Scope.objects.filter(quotation_id=quotation.id,parent=None)
+        # sritems = Scope.objects.filter(quotation_id=quotation.id,parent=None)
         context['sritems'] = MainSrItem.objects.filter(maintenance_id=main_pk, sr_id=sr_pk)
         # context['sritems'] = sritems
         context['quotation'] = quotation
-        
-        if(MainSRSignature.objects.filter(maintenance_id=main_pk, sr_id=sr_pk).exists()):
+
+        if (MainSRSignature.objects.filter(maintenance_id=main_pk, sr_id=sr_pk).exists()):
             context['srsignature'] = MainSRSignature.objects.get(maintenance_id=main_pk, sr_id=sr_pk)
         else:
             context['srsignature'] = None
         context['projectitemall'] = Scope.objects.filter(quotation_id=quotation.id)
         print("=========>", Scope.objects.filter(quotation_id=quotation.id), quotation.id)
         return context
+
 
 @ajax_login_required
 def ajax_update_main_service_report(request):
@@ -380,18 +411,19 @@ def ajax_update_main_service_report(request):
         servicepk = request.POST.get('servicepk')
 
         srdata = MainSr.objects.get(id=servicepk)
-        srdata.srtype=srtype
-        srdata.srpurpose=srpurpose
-        srdata.srsystem =srsystem 
-        srdata.time_in=date_parser.parse(timein).replace(tzinfo=pytz.utc)
-        srdata.time_out=date_parser.parse(timeout).replace(tzinfo=pytz.utc)
-        srdata.remark=remark
+        srdata.srtype = srtype
+        srdata.srpurpose = srpurpose
+        srdata.srsystem = srsystem
+        srdata.time_in = date_parser.parse(timein).replace(tzinfo=pytz.utc)
+        srdata.time_out = date_parser.parse(timeout).replace(tzinfo=pytz.utc)
+        srdata.remark = remark
         srdata.save()
 
         return JsonResponse({
-                "status": "Success",
-                "messages": "Service Report information updated!"
-            })
+            "status": "Success",
+            "messages": "Service Report information updated!"
+        })
+
 
 @ajax_login_required
 def mainsrItemAdd(request):
@@ -416,7 +448,7 @@ def mainsrItemAdd(request):
                     "status": "Success",
                     "messages": "Service Report Item information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already SR Item is existed!"
@@ -428,7 +460,7 @@ def mainsrItemAdd(request):
                 sritem.qty = qty
                 sritem.uom_id = uom
                 sritem.maintenance_id = maintenanceid
-                sritem.sr_id=srid
+                sritem.sr_id = srid
                 sritem.save()
 
                 return JsonResponse({
@@ -436,11 +468,12 @@ def mainsrItemAdd(request):
                     "messages": "Service Report Item information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already SR Item is existed!"
                 })
+
 
 @ajax_login_required
 def getMainSrItem(request):
@@ -454,6 +487,7 @@ def getMainSrItem(request):
         }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def deleteMainSRItem(request):
     if request.method == "POST":
@@ -463,6 +497,7 @@ def deleteMainSRItem(request):
 
         return JsonResponse({'status': 'ok'})
 
+
 def ajax_export_main_sr_item(request, maintenanceid, srid):
     resource = MainSrItemResource()
     queryset = MainSrItem.objects.filter(maintenance_id=maintenanceid, sr_id=srid)
@@ -471,11 +506,12 @@ def ajax_export_main_sr_item(request, maintenanceid, srid):
     response['Content-Disposition'] = 'attachment; filename="project_maintenance_sr_items.csv"'
     return response
 
+
 @method_decorator(login_required, name='dispatch')
 class MainSrSignatureCreate(generic.CreateView):
     model = MainSRSignature
     fields = '__all__'
-    template_name="maintenance/service-signature.html"
+    template_name = "maintenance/service-signature.html"
 
     def post(self, request, *args, **kwargs):
         if request.method == 'POST':
@@ -485,19 +521,22 @@ class MainSrSignatureCreate(generic.CreateView):
             MainSRSignature.objects.create(
                 signature=request.POST.get('signature'),
                 name=sign_name,
-                nric = sign_nric,
-                update_date = datetime.datetime.strptime(sign_date,'%d %b %Y'),
+                nric=sign_nric,
+                update_date=datetime.datetime.strptime(sign_date, '%d %b %Y'),
                 sr_id=self.kwargs.get('srpk'),
                 maintenance_id=self.kwargs.get('pk')
             )
-            return HttpResponseRedirect('/maintenance-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))
+            return HttpResponseRedirect(
+                '/maintenance-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))
+
 
 @method_decorator(login_required, name='dispatch')
 class MainSrSignatureUpdate(generic.UpdateView):
     model = MainSRSignature
     pk_url_kwarg = 'signpk'
     fields = '__all__'
-    template_name="maintenance/service-signature.html"
+    template_name = "maintenance/service-signature.html"
+
     def post(self, request, *args, **kwargs):
         if request.method == 'POST':
             sign_name = request.POST.get("sign_name")
@@ -507,12 +546,14 @@ class MainSrSignatureUpdate(generic.UpdateView):
             srSignature.signature = request.POST.get('signature')
             srSignature.name = sign_name
             srSignature.nric = sign_nric
-            srSignature.update_date = datetime.datetime.strptime(sign_date.replace(',', ""),'%d %b %Y').date()
+            srSignature.update_date = datetime.datetime.strptime(sign_date.replace(',', ""), '%d %b %Y').date()
             srSignature.sr_id = self.kwargs.get('srpk')
             srSignature.maintenance_id = self.kwargs.get('pk')
             srSignature.save()
 
-            return HttpResponseRedirect('/maintenance-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))
+            return HttpResponseRedirect(
+                '/maintenance-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))
+
 
 @ajax_login_required
 def maindeviceadd(request):
@@ -553,7 +594,7 @@ def maindeviceadd(request):
                     "status": "Success",
                     "messages": "Device information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Hardware code Already is existed!"
@@ -561,18 +602,18 @@ def maindeviceadd(request):
         else:
             try:
                 device = Device.objects.get(id=deviceid)
-                device.hardware_code=hardware_code
+                device.hardware_code = hardware_code
                 device.hardware_desc = hardware_desc
                 device.serial_number = serial_number
                 device.uom = Uom.objects.get(id=uom_id)
                 device.supplier_name = supplier
-                device.expiry_date=expiry_date
-                device.licensing_date=licensing
+                device.expiry_date = expiry_date
+                device.licensing_date = licensing
                 device.remark = remark
                 device.qty = stock_qty
-                device.brand=brand
-                device.maintenance_id=maintenanceid
-                
+                device.brand = brand
+                device.maintenance_id = maintenanceid
+
                 device.save()
 
                 return JsonResponse({
@@ -580,11 +621,12 @@ def maindeviceadd(request):
                     "messages": "Device information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Error is existed!"
                 })
+
 
 @ajax_login_required
 def getDevice(request):
@@ -621,6 +663,7 @@ def getDevice(request):
             }
         return JsonResponse(json.dumps(data), safe=False)
 
+
 @ajax_login_required
 def devicedelete(request):
     if request.method == "POST":
@@ -629,6 +672,7 @@ def devicedelete(request):
         device.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def scheduleadd(request):
@@ -654,7 +698,7 @@ def scheduleadd(request):
                     "status": "Success",
                     "messages": "Schedule information added!"
                 })
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Bom is existed!"
@@ -665,7 +709,7 @@ def scheduleadd(request):
                 schedule.description = description
                 schedule.reminder = reminder
                 schedule.date = date
-                schedule.remark=remark
+                schedule.remark = remark
                 schedule.maintenance_id = maintenanceid
                 schedule.save()
 
@@ -674,11 +718,12 @@ def scheduleadd(request):
                     "messages": "Schedule information updated!"
                 })
 
-            except IntegrityError as e: 
+            except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
                     "messages": "Already Schedule is existed!"
                 })
+
 
 @ajax_login_required
 def scheduledelete(request):
@@ -688,6 +733,7 @@ def scheduledelete(request):
         schedule.delete()
 
         return JsonResponse({'status': 'ok'})
+
 
 @ajax_login_required
 def getSchedule(request):
@@ -700,8 +746,9 @@ def getSchedule(request):
             'remark': schedule.remark,
             'reminder': schedule.reminder
         }
-        
+
         return JsonResponse(json.dumps(data), safe=False)
+
 
 def exportMainSrPDF(request, value):
     sr = MainSr.objects.get(id=value)
@@ -712,22 +759,26 @@ def exportMainSrPDF(request, value):
     domain = request.META['HTTP_HOST']
     logo = Image('http://' + domain + '/static/assets/images/printlogo.png', hAlign='LEFT')
     response = HttpResponse(content_type='application/pdf')
-    #currentdate = datetime.date.today().strftime("%d-%m-%Y")
+    # currentdate = datetime.date.today().strftime("%d-%m-%Y")
     pdfname = sr.sr_no + ".pdf"
     response['Content-Disposition'] = 'attachment; filename={}'.format(pdfname)
     story = []
     buff = BytesIO()
-    doc = SimpleDocTemplate(buff, pagesize=portrait(A4), rightMargin=0.25*inch, leftMargin=0.25*inch, topMargin=1.4*inch, bottomMargin=0.25*inch, title=pdfname)
-    styleSheet=getSampleStyleSheet()
-    data= [
-        [Paragraph('''<para align=center><font size=10><b>S/N</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>Description</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>UOM</b></font></para>'''), Paragraph('''<para align=center><font size=10><b>QTY</b></font></para>''')],
+    doc = SimpleDocTemplate(buff, pagesize=portrait(A4), rightMargin=0.25 * inch, leftMargin=0.25 * inch,
+                            topMargin=1.4 * inch, bottomMargin=0.25 * inch, title=pdfname)
+    styleSheet = getSampleStyleSheet()
+    data = [
+        [Paragraph('''<para align=center><font size=10><b>S/N</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>Description</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>UOM</b></font></para>'''),
+         Paragraph('''<para align=center><font size=10><b>QTY</b></font></para>''')],
     ]
 
     if maintenance.start_date:
-        pdate =  maintenance.start_date.strftime('%d %b, %Y')
+        pdate = maintenance.start_date.strftime('%d %b, %Y')
     else:
         pdate = " "
-    
+
     if quotation.company_name.country:
         country = quotation.company_name.country.name
     else:
@@ -757,43 +808,61 @@ def exportMainSrPDF(request, value):
     else:
         time_in = " "
     srinfordata = [
-        [Paragraph('''<para align=left><font size=10><b>To: </b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.company_name)), "", "", "" , Paragraph('''<para align=center><font size=16><b>SERVICE REPORT</b></font></para>''')],
-        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)),"", "", "" , ""],
-        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "" ,"", "", Paragraph('''<para align=left><font size=10><b>SR No:</b> %s</font></para>''' % (sr.sr_no))],
-        ["", "", "" ,"", "", Paragraph('''<para align=left><font size=10><b>Maintenance No.:</b> %s</font></para>''' % (maintenance.main_no))],
-        [Paragraph('''<para align=left><font size=10><b>Attn :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (maintenance.contact_person.salutation + " " + maintenance.contact_person.contact_person)),Paragraph('''<para align=left><font size=10><b>Email :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (maintenance.email)), "", Paragraph('''<para align=left><font size=10><b>Date:</b> %s</font></para>''' % (sr.date.strftime('%d/%m/%Y')))],
-        [Paragraph('''<para align=left><font size=10><b>Tel :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (maintenance.tel)), Paragraph('''<para align=left><font size=10><b>Fax :</b></font></para>'''), Paragraph('''<para align=left><font size=10>%s</font></para>''' % (maintenance.fax)), "", ""],
-        ["", "", "" ,"", "", ""],
-        [Paragraph('''<para align=left><font size=10><b>Worksite: </b> %s</font></para>''' % (maintenance.worksite_address)), "", "" ,"", "", ""],
-        ["", "", "" ,"", "", ""],
-        [Paragraph('''<para align=left><font size=10><b>Service Type: </b> %s</font></para>''' % (srtype)), "", "" ,"", "", Paragraph('''<para align=left><font size=10><b>Time In: </b> %s</font></para>''' % (time_in))],
-        [Paragraph('''<para align=left><font size=10><b>System: </b> %s</font></para>'''  % (srsystem)), "", "" ,"", "", Paragraph('''<para align=left><font size=10><b>Time Out: </b> %s</font></para>''' % (time_out))],
-        [Paragraph('''<para align=left><font size=10><b>Purpose: </b> %s</font></para>''' % (srpurpose)), "", "" ,"", "", ""],
+        [Paragraph('''<para align=left><font size=10><b>To: </b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.company_name)), "", "", "",
+         Paragraph('''<para align=center><font size=16><b>SERVICE REPORT</b></font></para>''')],
+        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
+         "", "", ""],
+        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
+         "", "", Paragraph('''<para align=left><font size=10><b>SR No:</b> %s</font></para>''' % (sr.sr_no))],
+        ["", "", "", "", "", Paragraph(
+            '''<para align=left><font size=10><b>Maintenance No.:</b> %s</font></para>''' % (maintenance.main_no))],
+        [Paragraph('''<para align=left><font size=10><b>Attn :</b></font></para>'''), Paragraph(
+            '''<para align=left><font size=10>%s</font></para>''' % (
+                    maintenance.contact_person.salutation + " " + maintenance.contact_person.contact_person)),
+         Paragraph('''<para align=left><font size=10><b>Email :</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (maintenance.email)), "", Paragraph(
+            '''<para align=left><font size=10><b>Date:</b> %s</font></para>''' % (sr.date.strftime('%d/%m/%Y')))],
+        [Paragraph('''<para align=left><font size=10><b>Tel :</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (maintenance.tel)),
+         Paragraph('''<para align=left><font size=10><b>Fax :</b></font></para>'''),
+         Paragraph('''<para align=left><font size=10>%s</font></para>''' % (maintenance.fax)), "", ""],
+        ["", "", "", "", "", ""],
+        [Paragraph(
+            '''<para align=left><font size=10><b>Worksite: </b> %s</font></para>''' % (maintenance.worksite_address)),
+            "", "", "", "", ""],
+        ["", "", "", "", "", ""],
+        [Paragraph('''<para align=left><font size=10><b>Service Type: </b> %s</font></para>''' % (srtype)), "", "", "",
+         "", Paragraph('''<para align=left><font size=10><b>Time In: </b> %s</font></para>''' % (time_in))],
+        [Paragraph('''<para align=left><font size=10><b>System: </b> %s</font></para>''' % (srsystem)), "", "", "", "",
+         Paragraph('''<para align=left><font size=10><b>Time Out: </b> %s</font></para>''' % (time_out))],
+        [Paragraph('''<para align=left><font size=10><b>Purpose: </b> %s</font></para>''' % (srpurpose)), "", "", "",
+         "", ""],
     ]
     sr_head = ParagraphStyle("justifies", leading=18)
     information = Table(
         srinfordata,
         style=[
-            ('ALIGN',(0,0),(0,0),'LEFT'),
-            ('ALIGN',(1,0),(1,0),'LEFT'),
-            ('VALIGN',(0,0),(-1,0),'BOTTOM'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, 0), 'BOTTOM'),
             ('SPAN', (0, -3), (1, -3)),
-            ('ALIGN',(5,0),(5,-1),'CENTER'),
-            ('SPAN',(3,4),(4,4)),
-            ('SPAN',(0,7),(-1,7)),
-            ('SPAN',(0,9),(-2,9)),
-            ('SPAN',(0,10),(-2,10)),
-            ('SPAN',(0,11),(-1,11)),
+            ('ALIGN', (5, 0), (5, -1), 'CENTER'),
+            ('SPAN', (3, 4), (4, 4)),
+            ('SPAN', (0, 7), (-1, 7)),
+            ('SPAN', (0, 9), (-2, 9)),
+            ('SPAN', (0, 10), (-2, 10)),
+            ('SPAN', (0, 11), (-1, 11)),
 
         ]
     )
-    
-    information._argW[0]=0.8*inch
-    information._argW[1]=1.28*inch
-    information._argW[2]=0.8*inch
-    information._argW[3]=1.38*inch
-    information._argW[4]=0.89*inch
-    information._argW[5]=2.17*inch
+
+    information._argW[0] = 0.8 * inch
+    information._argW[1] = 1.28 * inch
+    information._argW[2] = 0.8 * inch
+    information._argW[3] = 1.38 * inch
+    information._argW[4] = 0.89 * inch
+    information._argW[5] = 2.17 * inch
     story.append(Spacer(1, 16))
     story.append(information)
     story.append(Spacer(1, 16))
@@ -814,44 +883,44 @@ def exportMainSrPDF(request, value):
             data.append(temp_data)
             index += 1
 
-        exportD=Table(
+        exportD = Table(
             data,
             style=[
                 ('BACKGROUND', (0, 0), (5, 0), colors.lavender),
-                ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('ALIGN',(0,0),(-1,-1),'CENTER'),
-                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ],
         )
     else:
-        data.append(["No data available in table", "", "", ""]) 
+        data.append(["No data available in table", "", "", ""])
         exportD = Table(
             data,
             style=[
                 ('BACKGROUND', (0, 0), (-1, 0), colors.lavender),
-                ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
-                ('ALIGN',(0,0),(-1,-1),'CENTER'),
-                ('SPAN',(0,1),(-1,-1)),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('SPAN', (0, 1), (-1, -1)),
             ],
         )
-        exportD._argH[1]=0.3*inch
-    exportD._argW[0]=0.40*inch
-    exportD._argW[1]=5.456*inch
-    exportD._argW[2]=0.732*inch
-    exportD._argW[3]=0.732*inch
+        exportD._argH[1] = 0.3 * inch
+    exportD._argW[0] = 0.40 * inch
+    exportD._argW[1] = 5.456 * inch
+    exportD._argW[2] = 0.732 * inch
+    exportD._argW[3] = 0.732 * inch
     story.append(exportD)
     story.append(Spacer(1, 15))
     if len(data) > 6:
         story.append(PageBreak())
         story.append(Spacer(1, 15))
 
-    style_condition = ParagraphStyle(name='left',fontSize=9, parent=styleSheet['Normal'], leftIndent=20, leading=15)
+    style_condition = ParagraphStyle(name='left', fontSize=9, parent=styleSheet['Normal'], leftIndent=20, leading=15)
     story.append(Paragraph("Received the above Goods in Good Order & Condition", style_condition))
-    
+
     story.append(Spacer(1, 10))
-    
-    style_sign = ParagraphStyle(name='left',fontSize=10, parent=styleSheet['Normal'])
+
+    style_sign = ParagraphStyle(name='left', fontSize=10, parent=styleSheet['Normal'])
     sign_title1 = '''
         <para align=left>
             <font size=10><b>Signature: </b></font>
@@ -862,27 +931,29 @@ def exportMainSrPDF(request, value):
             <font size=10><b>Authorised  Signature: </b></font>
         </para>
     '''
-    
-    srtable1=Table(
+
+    srtable1 = Table(
         [
-            [Paragraph('''<para align=left><font size=12><b>For Customers:</b></font></para>'''), Paragraph('''<para align=right><font size=12><b>For CNI TECHNOLOGY PTE LTD:</b></font></para>''')],
+            [Paragraph('''<para align=left><font size=12><b>For Customers:</b></font></para>'''),
+             Paragraph('''<para align=right><font size=12><b>For CNI TECHNOLOGY PTE LTD:</b></font></para>''')],
         ],
         style=[
-            ('VALIGN',(0,0),(0,-1),'TOP'),
+            ('VALIGN', (0, 0), (0, -1), 'TOP'),
         ],
     )
-    srtable1._argW[0]=3.66*inch
-    srtable1._argW[1]=3.66*inch
+    srtable1._argW[0] = 3.66 * inch
+    srtable1._argW[1] = 3.66 * inch
     story.append(srtable1)
     srsignature = MainSRSignature.objects.filter(sr_id=value)
-    
+
     if srsignature.exists():
         srsign_data = MainSRSignature.objects.get(sr_id=value)
         sign_name = srsign_data.name
         sign_nric = srsign_data.nric
         sign_date = srsign_data.update_date.strftime('%d/%m/%Y')
-        sign_logo = Image('http://' + domain + srsign_data.signature_image.url, hAlign='LEFT', width=1.2*inch, height=0.8*inch)
-            
+        sign_logo = Image('http://' + domain + srsign_data.signature_image.url, hAlign='LEFT', width=1.2 * inch,
+                          height=0.8 * inch)
+
     else:
         sign_name = ""
         sign_nric = ""
@@ -891,56 +962,63 @@ def exportMainSrPDF(request, value):
 
     if sr.created_by:
         if sr.created_by.signature:
-            auto_sign = Image('http://' + domain + sr.created_by.signature.url, hAlign='LEFT', width=0.8*inch, height=0.8*inch)
+            auto_sign = Image('http://' + domain + sr.created_by.signature.url, hAlign='LEFT', width=0.8 * inch,
+                              height=0.8 * inch)
         else:
             auto_sign = Image('http://' + domain + '/static/assets/images/logo.png', hAlign='LEFT')
     else:
         auto_sign = Image('http://' + domain + '/static/assets/images/logo.png', hAlign='LEFT')
-    srtable3=Table(
+    srtable3 = Table(
         [
-            [Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_name)), "",Paragraph(sign_title2, style_sign), ""],
+            [Paragraph('''<para align=left><font size=9><b>Name:</b></font></para>'''),
+             Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_name)), "",
+             Paragraph(sign_title2, style_sign), ""],
             [Paragraph(sign_title1, style_sign), "", "", auto_sign, ""],
-            ["", sign_logo,"", "", ""]
+            ["", sign_logo, "", "", ""]
         ],
         style=[
-            ('VALIGN',(0,0),(-1,-1),'TOP'),
-            ('SPAN',(3,0),(-1,0)),
-            ('SPAN',(3,1),(4,-1)),
-            ('SPAN',(1,2),(2,2)),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('SPAN', (3, 0), (-1, 0)),
+            ('SPAN', (3, 1), (4, -1)),
+            ('SPAN', (1, 2), (2, 2)),
         ],
     )
     story.append(Spacer(1, 10))
-    srtable3._argW[0]=1.0*inch
-    srtable3._argW[1]=1.83*inch
-    srtable3._argW[2]=1.63*inch
-    srtable3._argW[3]=1.0*inch
-    srtable3._argW[4]=1.83*inch
+    srtable3._argW[0] = 1.0 * inch
+    srtable3._argW[1] = 1.83 * inch
+    srtable3._argW[2] = 1.63 * inch
+    srtable3._argW[3] = 1.0 * inch
+    srtable3._argW[4] = 1.83 * inch
     story.append(srtable3)
-    srtable4=Table(
+    srtable4 = Table(
         [
-            [Paragraph('''<para align=left spaceb=2><font size=9><b>NRIC</b></font><br/><font size=9><b>(last 3 digits):</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_nric))],
-            [Paragraph('''<para align=left><font size=9><b>Date:</b></font></para>'''), Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_date))]
+            [Paragraph(
+                '''<para align=left spaceb=2><font size=9><b>NRIC</b></font><br/><font size=9><b>(last 3 digits):</b></font></para>'''),
+                Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_nric))],
+            [Paragraph('''<para align=left><font size=9><b>Date:</b></font></para>'''),
+             Paragraph('''<para align=left><font size=9>%s</font></para>''' % (sign_date))]
         ],
         style=[
-            ('VALIGN',(1,0),(1,-1),'MIDDLE'),
+            ('VALIGN', (1, 0), (1, -1), 'MIDDLE'),
         ],
     )
-    srtable4._argW[0]=1.0*inch
-    srtable4._argW[1]=6.32*inch
+    srtable4._argW[0] = 1.0 * inch
+    srtable4._argW[1] = 6.32 * inch
     story.append(Spacer(1, 10))
     story.append(srtable4)
-    doc.build(story,canvasmaker=NumberedCanvas)
+    doc.build(story, canvasmaker=NumberedCanvas)
     response.write(buff.getvalue())
     buff.close()
 
     return response
 
+
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
         canvas.Canvas.__init__(self, *args, **kwargs)
         self._saved_page_states = []
-        self.PAGE_HEIGHT=defaultPageSize[1]
-        self.PAGE_WIDTH=defaultPageSize[0]
+        self.PAGE_HEIGHT = defaultPageSize[1]
+        self.PAGE_WIDTH = defaultPageSize[0]
         self.domain = settings.HOST_NAME
         self.logo = ImageReader('http://' + self.domain + '/static/assets/images/printlogo.png')
 
@@ -966,8 +1044,9 @@ class NumberedCanvas(canvas.Canvas):
         self.drawString(150, self.PAGE_HEIGHT - 80, "Tel.6747 6169 Fax.7647 5669")
         self.drawString(150, self.PAGE_HEIGHT - 95, "RCB No.201318779M")
         self.setFont("Times-Roman", 9)
-        self.drawRightString(self.PAGE_WIDTH/2.0 + 10, 0.35 * inch,
-            "Page %d of %d" % (self._pageNumber, page_count))
+        self.drawRightString(self.PAGE_WIDTH / 2.0 + 10, 0.35 * inch,
+                             "Page %d of %d" % (self._pageNumber, page_count))
+
 
 def ajax_export_maintenance(request):
     resource = MaintenanceResource()
@@ -976,27 +1055,27 @@ def ajax_export_maintenance(request):
     response['Content-Disposition'] = 'attachment; filename="maintenance-summary.csv"'
     return response
 
+
 def ajax_import_maintenance(request):
-    
     if request.method == 'POST':
         org_column_names = ['main_no', 'customer', 'start_date', 'end_date', 'in_incharge', 'main_status']
-        
+
         csv_file = request.FILES['file']
         contents = csv_file.read().decode('UTF-8')
         path = "temp.csv"
-        f = open(path,'w')
+        f = open(path, 'w')
         f.write(contents)
         f.close()
 
-        df = pd.read_csv(path)    
+        df = pd.read_csv(path)
         df.fillna("", inplace=True)
         column_names = list(df)
 
         if len(column_names) == 1:
-            df = pd.read_csv(path, delimiter = ';', decimal = ',', encoding = 'utf-8')    
+            df = pd.read_csv(path, delimiter=';', decimal=',', encoding='utf-8')
             df.fillna("", inplace=True)
             column_names = list(df)
-        
+
         dif_len = len(list(set(org_column_names) - set(column_names)))
 
         if dif_len == 0:
@@ -1011,8 +1090,9 @@ def ajax_import_maintenance(request):
                         maintenance = Maintenance(
                             main_no=row["main_no"],
                             customer=row["customer"],
-                            start_date=datetime.datetime.strptime(row["start_date"],'%Y-%m-%d').replace(tzinfo=pytz.utc), 
-                            end_date=datetime.datetime.strptime(row["end_date"],'%Y-%m-%d').replace(tzinfo=pytz.utc), 
+                            start_date=datetime.datetime.strptime(row["start_date"], '%Y-%m-%d').replace(
+                                tzinfo=pytz.utc),
+                            end_date=datetime.datetime.strptime(row["end_date"], '%Y-%m-%d').replace(tzinfo=pytz.utc),
                             in_incharge=row["in_incharge"],
                             main_status=row["main_status"],
                         )
@@ -1026,20 +1106,23 @@ def ajax_import_maintenance(request):
                         maintenance = Maintenance.objects.filter(main_no=row["main_no"])[0]
                         maintenance.main_no = row["main_no"]
                         maintenance.customer = row["customer"]
-                        maintenance.start_date=datetime.datetime.strptime(row["start_date"],'%Y-%m-%d').replace(tzinfo=pytz.utc)
-                        maintenance.end_date=datetime.datetime.strptime(row["end_date"],'%Y-%m-%d').replace(tzinfo=pytz.utc)
-                        maintenance.in_incharge=row["in_incharge"]
-                        maintenance.main_status=row["main_status"]
-                        
+                        maintenance.start_date = datetime.datetime.strptime(row["start_date"], '%Y-%m-%d').replace(
+                            tzinfo=pytz.utc)
+                        maintenance.end_date = datetime.datetime.strptime(row["end_date"], '%Y-%m-%d').replace(
+                            tzinfo=pytz.utc)
+                        maintenance.in_incharge = row["in_incharge"]
+                        maintenance.main_status = row["main_status"]
+
                         maintenance.save()
                         exist_record += 1
                     except Exception as e:
                         print(e)
                         failed_record += 1
             os.remove(path)
-            return JsonResponse({'status':'true','error_code':'0', 'total': record_count, 'success': success_record, 'failed': failed_record, 'exist': exist_record})
+            return JsonResponse({'status': 'true', 'error_code': '0', 'total': record_count, 'success': success_record,
+                                 'failed': failed_record, 'exist': exist_record})
         else:
             os.remove(path)
             # column count is not equals
-            return JsonResponse({'status':'false','error_code':'1'})
+            return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
