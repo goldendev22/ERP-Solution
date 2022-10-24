@@ -2115,6 +2115,7 @@ class ReportDetailView(DetailView):
         context['salerep'] = content_pk
         context['contacts'] = Contact.objects.all()
         context['comments'] = SaleReportComment.objects.filter(salereport_id=content_pk)
+
         return context
 
 @ajax_login_required

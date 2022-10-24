@@ -8,7 +8,7 @@
     <link href="{% static 'assets/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" />
     <link href="{% static 'assets/libs/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" />
     <!-- Responsive datatable examples -->
-    <link href="{% static 'assets/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" /> 
+    <link href="{% static 'assets/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" />
     <style>
         #newSearchPlace div.dataTables_filter {
             text-align: right;
@@ -41,7 +41,7 @@
                         <li class="breadcrumb-item"><a class="text-primary" href="{% url 'all_reports' %}"><b>Sales Report</b></a></li>
                         <li class="breadcrumb-item active">Sales Report Details</li>
                     </ol>
-                    
+
             </div>
         </div>
     </div>
@@ -95,7 +95,8 @@
                                                     <select class="form-control select2" id="contact_person" name="contact_person" required>
                                                         <option value="">Select the Contacts</option>
                                                         {% for contact in contacts %}
-                                                            <option value="{{contact.contact_person}}"{% if contact.contact_person == salereport.contact_person %} selected{% endif %}>{{contact.contact_person}}</option>
+                                                            <option value="{{contact.contact_person}}"
+                                                                    {% if contact.id == salereport.contact_person_id %} selected{% endif %}>{{contact.contact_person}}</option>
                                                         {% endfor %}
                                                     </select>
                                                 </div>
@@ -107,8 +108,8 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        
-                                        
+
+
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <div class="mb-3">
@@ -129,7 +130,7 @@
                                                 <textarea class="form-control" id="note" name="note" rows="5" required>{{salereport.RE|default_if_none:''}}</textarea>
                                             </div>
                                         </div>
-            
+
                                     </div>
                                     <div class="col-md-2"></div>
                                     <div class="col-md-4">
@@ -142,9 +143,9 @@
                                                     <input type="text" class="form-control" id="qtt_id" name="qtt_id" value="{{salereport.qtt_id|default_if_none:''}}" style="text-align: center;padding-top: 10px;padding-bottom: 10px;font-size: 20px; width: 50%;" readonly required>
                                                 </div>
                                             </div>
-                                            
+
                                         </div>
-                                        
+
                                         <div class="row mt-3 me-2 ms-2">
                                             <div class="col-md-12">
                                                 <label for="sale_type" class="form-label">Sales Type:</label>
@@ -154,16 +155,16 @@
                                                     <option value="Sales" {% if salereport.sale_type == "Sales" %}selected{% endif %}>Sales</option>
                                                 </select>
                                             </div>
-                                            
+
                                         </div>
                                         <div class="row mt-3 me-2 ms-2">
-                                            
+
                                             <label for="date" class="form-label">Date:</label>
                                             <div class="input-group">
                                                 <span class="input-group-text"><i class="mdi mdi-calendar"></i></span>
                                                 <input type="text" class="form-control" id="date" name="date" data-date-format="dd M yyyy" data-provide="datepicker" data-date-autoclose="true" value="{{salereport.date|date:'d M, Y'|default_if_none:''}}" required>
                                             </div>
-                                            
+
                                         </div>
                                         <div class="mt-3 me-2 ms-2 row">
                                             <div class="col-md-12">
@@ -178,8 +179,8 @@
                                             </div>
                                         </div>
                                     </div>
-                                    
-                                </div>           
+
+                                </div>
                             </form>
                         </div>
                         <div class="tab-pane p-1" id="comment" role="tabpanel">
@@ -193,7 +194,7 @@
                                             <div class="justify-content-end d-flex">
                                                 <div id="newSearchPlace"></div>
                                             </div>
-                                            
+
                                         </div>
                                     </div>
                                     <div class="table-responsive">
@@ -216,7 +217,7 @@
                                                         <a href="javascript:void(0);" onclick="updatecomment('{{comment.id}}')" class="btn btn-outline-primary btn-sm edit" title="Edit">
                                                             <i class="fas fa-pencil-alt"></i>
                                                         </a>
-                                            
+
                                                         <a href="javascript:void(0);" onclick="deletecomment('{{comment.id}}')" class="btn btn-outline-danger btn-sm delete" title="Delete">
                                                             <i class="far fa-trash-alt"></i>
                                                         </a>
@@ -228,11 +229,11 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>  
+                        </div>
                     </div>
-                      
-                        
-                    
+
+
+
                 </div>
             </div>
         </div>
@@ -273,7 +274,7 @@
 
                     <div id="text_error_comment" style="display: none;" class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
                     </div>
-                    
+
                     <div class="mb-3 mt-3 row">
                         <label for="mcomment" class="col-md-2 col-form-label">Comment:</label>
                         <div class="col-md-10">
@@ -282,12 +283,12 @@
                     </div>
                 </form>
                 <input type="hidden" id="commentid" value="-1" />
-            
+
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary waves-effect btn-sm" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary waves-effect waves-light btn-sm btn_commentadd">Add</button>
-                
+
             </div>
         </div>
         <!-- /.modal-content -->

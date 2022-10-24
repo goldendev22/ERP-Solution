@@ -424,7 +424,7 @@
                                                         <td class="align-middle">{{projectitem.qty|default_if_none:""}}</td>
                                                         <td class="align-middle">
                                                             {% if projectitem.allocation_perc %}
-                                                                {{projectitem.allocation_perc|default_if_none:""}} %
+                                                                {{projectitem.allocation_perc|floatformat:2|default_if_none:""}} %
                                                             {% endif %}
                                                         </td>
                                                         <td class="align-middle">
@@ -447,7 +447,7 @@
                                                             <td class="align-middle">{{child.qty|default_if_none:""}}</td>
                                                             <td class="align-middle">
                                                                 {% if child.allocation_perc %}
-                                                                    {{child.allocation_perc|default_if_none:""}} %
+                                                                    {{child.allocation_perc|floatformat:2|default_if_none:""}} %
                                                                 {% endif %}
                                                             </td>
                                                             <td class="align-middle">
@@ -510,7 +510,7 @@
                                                 <td class="align-middle">{{child.qty|default_if_none:""}}</td>
                                                 <td class="align-middle">
                                                     {% if child.allocation_perc %}
-                                                        {{child.allocation_perc|default_if_none:""}}
+                                                        {{child.allocation_perc|floatformat:2|default_if_none:""}}
                                                     {% endif %}
                                                 </td>
                                                 <td class="align-middle">{{child.cumulativeqty|default_if_none:""}}</td>
@@ -1924,6 +1924,7 @@
     $("#summaryupdate").on('click', function(e){
         $("#SummaryDetailForm input").prop("disabled", false);
         $("#SummaryDetailForm textarea").prop("disabled", false);
+        $("#note").prop("disabled", true);
         
         $('select').prop('disabled', false);
         $("#SummaryDetailForm #company_name").prop("disabled", true);
