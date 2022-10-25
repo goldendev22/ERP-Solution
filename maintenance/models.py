@@ -11,6 +11,9 @@ def content_file(instance, filename):
 def content_file_main_service(instance, filename):
     return 'maintenance/%s/service/%s' % (instance.maintenance.main_no, filename)
 
+def content_file_srsignature(instance, filename):
+    return 'maintenance/%s/srsignature/%s' % (instance.maintenance.main_no, filename)
+
 class Maintenance(models.Model):
     main_no = models.CharField(unique=True,max_length=100, blank=True, null=True)
     customer = models.CharField(max_length=100, blank=True, null=True)
@@ -120,6 +123,7 @@ class MainSRSignature(JSignatureFieldsMixin):
     nric = models.CharField(max_length=250, blank=True, null=True)
     maintenance = models.ForeignKey(Maintenance, on_delete=models.SET_NULL, blank=True, null=True)
     sr = models.ForeignKey(MainSr, on_delete=models.SET_NULL, blank=True, null=True)
+    signature_image = models.ImageField(upload_to=content_file_srsignature,null=True, blank=True)
     update_date = models.DateField(null=True, blank=True)
     def __str__(self):
         return self.name

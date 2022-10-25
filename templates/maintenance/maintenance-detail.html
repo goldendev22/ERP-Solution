@@ -947,6 +947,7 @@
     $("#mainupdate").on('click', function(e){
         $("#MaintenanceDetailForm input").prop("disabled", false);
         $("#MaintenanceDetailForm textarea").prop("disabled", false);
+        $('#note').prop('disabled', true);
         $('select').prop('disabled', false);
         $('#mainsave').prop('disabled', false);
         $("#main_no").prop( "disabled", true );

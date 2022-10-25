@@ -1,7 +1,9 @@
+import base64
 import datetime
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.files.base import ContentFile
 from django.utils.decorators import method_decorator
 from django.views.generic.list import ListView
 import pytz
@@ -30,7 +32,6 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from io import BytesIO
 from reportlab.lib.pagesizes import A4, landscape, portrait
 from notifications.signals import notify
-from datetime import datetime, timezone
 from pytz import timezone as pytimezone
 
 
@@ -48,9 +49,9 @@ class MaintenanceView(ListView):
 
 
 def task():
-    sender = User.objects.get(role="Managers")
+    sender = User.objects.filter(role="Managers").first()
     maintenance_schedules = Schedule.objects.all()
-    now_date = datetime.now(pytimezone(os.getenv("TIME_ZONE"))).date()
+    now_date = datetime.datetime.now(pytimezone(os.getenv("TIME_ZONE"))).date()
     for schedule in maintenance_schedules:
         to_date = schedule.date
         diff_days = (to_date - now_date).days
@@ -395,7 +396,6 @@ class MainSrDetailView(DetailView):
         else:
             context['srsignature'] = None
         context['projectitemall'] = Scope.objects.filter(quotation_id=quotation.id)
-        print("=========>", Scope.objects.filter(quotation_id=quotation.id), quotation.id)
         return context
 
 
@@ -518,13 +518,20 @@ class MainSrSignatureCreate(generic.CreateView):
             sign_name = request.POST.get("sign_name")
             sign_nric = request.POST.get("sign_nric")
             sign_date = request.POST.get("sign_date")
+
+            default_base64 = request.POST.get("default_base64")
+            format, imgstr = default_base64.split(';base64,')
+            ext = format.split('/')[-1]
+            signature_image = ContentFile(base64.b64decode(imgstr),
+                                          name='service-sign-' + datetime.date.today().strftime("%d-%m-%Y") + "." + ext)
             MainSRSignature.objects.create(
                 signature=request.POST.get('signature'),
                 name=sign_name,
                 nric=sign_nric,
                 update_date=datetime.datetime.strptime(sign_date, '%d %b %Y'),
                 sr_id=self.kwargs.get('srpk'),
-                maintenance_id=self.kwargs.get('pk')
+                maintenance_id=self.kwargs.get('pk'),
+                signature_image = signature_image
             )
             return HttpResponseRedirect(
                 '/maintenance-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))
@@ -791,6 +798,10 @@ def exportMainSrPDF(request, value):
         srpurpose = sr.srpurpose
     else:
         srpurpose = " "
+    if sr.remark:
+        srremark = sr.remark
+    else:
+        srremark = " "
     if sr.srsystem:
         srsystem = sr.srsystem
     else:
@@ -811,8 +822,7 @@ def exportMainSrPDF(request, value):
         [Paragraph('''<para align=left><font size=10><b>To: </b></font></para>'''),
          Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.company_name)), "", "", "",
          Paragraph('''<para align=center><font size=16><b>SERVICE REPORT</b></font></para>''')],
-        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
-         "", "", ""],
+
         ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
          "", "", Paragraph('''<para align=left><font size=10><b>SR No:</b> %s</font></para>''' % (sr.sr_no))],
         ["", "", "", "", "", Paragraph(
@@ -837,6 +847,8 @@ def exportMainSrPDF(request, value):
         [Paragraph('''<para align=left><font size=10><b>System: </b> %s</font></para>''' % (srsystem)), "", "", "", "",
          Paragraph('''<para align=left><font size=10><b>Time Out: </b> %s</font></para>''' % (time_out))],
         [Paragraph('''<para align=left><font size=10><b>Purpose: </b> %s</font></para>''' % (srpurpose)), "", "", "",
+         "", ""],
+        [Paragraph('''<para align=left><font size=10><b>Remark: </b> %s</font></para>''' % (srremark)), "", "", "",
          "", ""],
     ]
     sr_head = ParagraphStyle("justifies", leading=18)

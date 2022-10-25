@@ -1039,7 +1039,6 @@ def ajax_otcalculation(request):
 
         for q in query_ots:
 
-            print("--- checkin ---", q.checkin_time)
             if q.checkout_time is not None and q.checkin_time is not None:
                 modetime = datetime.timedelta(hours=17)
                 holiday_modetime = datetime.timedelta(hours=8)
@@ -1323,7 +1322,6 @@ def ajax_otcalculation_filter_summary(request):
                                                             datetime.datetime.strptime(checkout_time,
                                                                               '%Y-%m-%d').date()]).count()
         # print("----holiday count----", holiday_cnt)
-        print("query", str_query)
 
         query_ots = WorkLog.objects.raw(str_query)
         for q in query_ots:
