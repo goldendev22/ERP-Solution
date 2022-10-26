@@ -23,9 +23,9 @@ def checking_notification():
     views.task()
 
 
-scheduler.add_job(checking_notification, 'interval', seconds=3)
-# scheduler.add_job(checking_notification,
-#                   trigger=CronTrigger(hour="14", minute="24"),
-#                   id="checking_notification",
-#                   max_instances=1,
-#                   replace_existing=True, )
+# scheduler.add_job(checking_notification, 'interval', seconds=3)
+scheduler.add_job(checking_notification,
+                  trigger=CronTrigger(hour="14", minute="24"),
+                  id="checking_notification",
+                  max_instances=1,
+                  replace_existing=True, )
