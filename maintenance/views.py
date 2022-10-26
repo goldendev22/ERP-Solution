@@ -59,7 +59,7 @@ def task():
         if diff_days > 0:
             if diff_days == reminder_days:
                 # notification send
-                description = 'Maintenance {0}-{1} - Maintenance Schedule reminder before {2} days'.format(
+                description = 'Maintenance No : {0} {1} - Maintenance Schedule Reminder before {2} days'.format(
                     schedule.maintenance.main_no, schedule.description, schedule.reminder)
                 for receiver in User.objects.all():
                     if receiver.notificationprivilege.maintenance_reminded:
