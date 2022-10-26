@@ -59,8 +59,8 @@ def task():
         if diff_days > 0:
             if diff_days == reminder_days:
                 # notification send
-                description = '{0} - Maintenance Schedule reminder before {1} days'.format(
-                    schedule.description, schedule.reminder)
+                description = 'Maintenance {0}-{1} - Maintenance Schedule reminder before {2} days'.format(
+                    schedule.maintenance.main_no, schedule.description, schedule.reminder)
                 for receiver in User.objects.all():
                     if receiver.notificationprivilege.maintenance_reminded:
                         notify.send(sender, recipient=receiver, verb='Message', level="success",
@@ -518,20 +518,13 @@ class MainSrSignatureCreate(generic.CreateView):
             sign_name = request.POST.get("sign_name")
             sign_nric = request.POST.get("sign_nric")
             sign_date = request.POST.get("sign_date")
-
-            default_base64 = request.POST.get("default_base64")
-            format, imgstr = default_base64.split(';base64,')
-            ext = format.split('/')[-1]
-            signature_image = ContentFile(base64.b64decode(imgstr),
-                                          name='service-sign-' + datetime.date.today().strftime("%d-%m-%Y") + "." + ext)
             MainSRSignature.objects.create(
                 signature=request.POST.get('signature'),
                 name=sign_name,
                 nric=sign_nric,
                 update_date=datetime.datetime.strptime(sign_date, '%d %b %Y'),
                 sr_id=self.kwargs.get('srpk'),
-                maintenance_id=self.kwargs.get('pk'),
-                signature_image = signature_image
+                maintenance_id=self.kwargs.get('pk')
             )
             return HttpResponseRedirect(
                 '/maintenance-detail/' + self.kwargs.get('pk') + '/service-report-detail/' + self.kwargs.get('srpk'))

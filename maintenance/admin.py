@@ -25,7 +25,7 @@ def checking_notification():
 
 # scheduler.add_job(checking_notification, 'interval', seconds=3)
 scheduler.add_job(checking_notification,
-                  trigger=CronTrigger(hour="14", minute="24"),
+                  trigger=CronTrigger(hour="00", minute="00"),
                   id="checking_notification",
                   max_instances=1,
                   replace_existing=True, )
