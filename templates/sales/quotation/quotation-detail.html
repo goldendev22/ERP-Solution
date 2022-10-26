@@ -246,7 +246,7 @@
                                         <div class="mt-3 mb-3 row">
                                             <div class="col-md-6">
                                                 <label for="po_no" class="form-label">PO No:</label>
-                                                <input type="text" class="form-control" id="po_no" style="height:38px;" name="po_no" value="{{quotation.po_no|default_if_none:''}}" {% if quotation.qtt_status == "Awarded" %}required{% endif %}/>
+                                                <input type="text" class="form-control" id="po_no" style="height:38px;" name="po_no" value="{{quotation.po_no|default_if_none:''}}"/>
                                                 <ul id="po_no_valid" style="display: none;" class="parsley-errors-list filled">
                                                     <li class="parsley-required">
                                                         PO No is required to unlock status update.
@@ -769,7 +769,7 @@
     // });
     $("#po_no").on("click", function(event) {
         if($("#po_no").val() == "") {
-            $("#po_no_valid").css("display", "block"); 
+            $("#po_no_valid").css("display", "none");
             $("#qtt_status").prop('disabled', true);
         } else {
             $("#po_no_valid").css("display", "none"); 
@@ -827,8 +827,10 @@
         $('#quotsaveandoverwrite').prop('disabled', false);
         if ($("#qtt_status").val() == "Awarded") {
             $('#sale_type').prop('disabled', true);
+            $('#po_no').prop('required', true);
         } else {
             $('#sale_type').prop('disabled', false);
+            $('#po_no').prop('required', false);
         }
         // if($("#po_no").val() == "") {
         //     $("#qtt_status").prop('disabled', true);
@@ -848,8 +850,10 @@
         $('#quotsaveandoverwrite').prop('disabled', true);
         if ($("#qtt_status").val() == "Awarded") {
             $('#sale_type').prop('disabled', true);
+            $('#po_no').prop('required', true);
         } else {
             $('#sale_type').prop('disabled', false);
+            $('#po_no').prop('required', false);
         }
         
         $("#qtt_status").val(`{{quotation.qtt_status}}`);
@@ -873,12 +877,14 @@
 
         if ($("#qtt_status").val() == "Awarded") {
             $('#sale_type').prop('disabled', true);
+            $('#po_no').prop('required', true);
+            $("#po_no_valid").css("display", "block");
         } else {
             $('#sale_type').prop('disabled', false);
+            $('#po_no').prop('required', false);
         }
         if($("#po_no").val() == "") {
             $('#qtt_status').prop('disabled', true);
-            $("#po_no_valid").css("display", "block"); 
         } else {
             $('#qtt_status').prop('disabled', false);
             $("#po_no_valid").css("display", "none"); 
