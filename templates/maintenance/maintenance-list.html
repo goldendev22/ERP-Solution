@@ -105,7 +105,7 @@
                                     <td class="align-middle">{{maintenance.company_name|default_if_none:""}}</td>
                                     <td class="align-middle">{{maintenance.start_date|date:"d M, Y"|default_if_none:""}}</td>
                                     <td class="align-middle">{{maintenance.end_date|date:"d M, Y"|default_if_none:""}}</td>
-                                    <td class="align-middle">{{maintenance.in_incharge|default_if_none:""}}</td>
+                                    <td class="align-middle">{{maintenance.proj_incharge|default_if_none:""}}</td>
                                     <td class="align-middle">{{maintenance.main_status|default_if_none:""}}</td>
                                     <td class="align-middle">
                                         <a href="{% url 'maintenance_detail' maintenance.id %}" class="btn btn-outline-secondary btn-sm" title="View">
