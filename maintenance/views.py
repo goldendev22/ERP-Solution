@@ -1131,3 +1131,76 @@ def ajax_import_maintenance(request):
             # column count is not equals
             return JsonResponse({'status': 'false', 'error_code': '1'})
     return HttpResponse("Ok")
+
+@ajax_login_required
+def getMainSrSign(request):
+    if request.method == "POST":
+        serviceid = request.POST.get('serviceid')
+        srsignature = MainSRSignature.objects.get(id=serviceid)
+        data = {
+            'name': srsignature.name,
+            'nric': srsignature.nric,
+            'date': srsignature.update_date.strftime('%d %b, %Y'),
+            'signature': srsignature.signature
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+
+
+@ajax_login_required
+def addMainSrSign(request):
+    if request.method == "POST":
+        name = request.POST.get('name')
+        nric = request.POST.get('nric')
+        date = request.POST.get('date')
+        signature = request.POST.get('signature')
+        serviceid = request.POST.get('serviceid')
+        projectid = request.POST.get('projectid')
+        default_base64 = request.POST.get("default_base64")
+        srid = request.POST.get('srid')
+
+        format, imgstr = default_base64.split(';base64,')
+        ext = format.split('/')[-1]
+        signature_image = ContentFile(base64.b64decode(imgstr),
+                                      name='service-sign-' + datetime.date.today().strftime("%d-%m-%Y") + "." + ext)
+        if serviceid == "-1":
+            try:
+                MainSRSignature.objects.create(
+                    name=name,
+                    nric=nric,
+                    update_date=date,
+                    signature=signature,
+                    sr_id=srid,
+                    project_id=projectid,
+                    signature_image=signature_image
+                )
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "Service Signature information added!"
+                })
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+        else:
+            try:
+                srsignature = MainSRSignature.objects.get(id=serviceid)
+                srsignature.name = name
+                srsignature.nric = nric
+                srsignature.update_date = date
+                srsignature.signature = signature
+                srsignature.sr_id = srid
+                srsignature.project_id = projectid
+                srsignature.signature_image = signature_image
+                srsignature.save()
+
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "Service Signature information updated!"
+                })
+
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })

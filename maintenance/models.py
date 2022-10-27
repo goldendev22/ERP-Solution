@@ -123,7 +123,7 @@ class MainSRSignature(JSignatureFieldsMixin):
     nric = models.CharField(max_length=250, blank=True, null=True)
     maintenance = models.ForeignKey(Maintenance, on_delete=models.SET_NULL, blank=True, null=True)
     sr = models.ForeignKey(MainSr, on_delete=models.SET_NULL, blank=True, null=True)
-    # signature_image = models.ImageField(upload_to=content_file_srsignature,null=True, blank=True)
+    signature_image = models.ImageField(upload_to=content_file_srsignature,null=True, blank=True)
     update_date = models.DateField(null=True, blank=True)
     def __str__(self):
         return self.name

@@ -4,6 +4,7 @@
 {% block page-title %}Maintenance Service Report Detail{% endblock%}
 {% block css %}
 <link href="{% static 'assets/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'assets/libs/bootstrap-datepicker/css/bootstrap-datepicker.min.css' %}" rel="stylesheet">
 <!-- Sweet Alert-->
 <link href="{% static 'assets/libs/sweetalert2/sweetalert2.min.css' %}" rel="stylesheet" type="text/css"/>
 <!-- DataTables -->
@@ -20,7 +21,6 @@
         body[data-sidebar=dark].vertical-collpsed {
                 min-height: auto!important;
             }
-
 </style>
 {% endblock %}
 {% block content %}
@@ -37,6 +37,18 @@
         text-overflow: ellipsis;
         max-width: 100%!important;
         white-space: nowrap;
+    }
+    #signature {
+		border: 2px dotted black;
+		background-color:lightgrey;
+	}
+    #signatureparent {
+		color:darkblue;
+		background-color:darkgrey;
+		padding:5px;
+	}
+    .datepicker {
+            z-index:1151 !important;
     }
 
 </style>
@@ -134,8 +146,8 @@
                                                             name="srcontact_person" required>
                                                         <option value="">Select the Contacts</option>
                                                         {% for contact in contacts %}
-                                                        <option value="{{contact.contact_person}}" {% if contact.id==
-                                                                summary.contact_person.id %} selected{% endif %}>
+                                                        <option value="{{contact.contact_person}}"
+                                                                {% if contact.id == summary.contact_person.id %} selected {% endif %}>
                                                             {{contact.contact_person}}
                                                         </option>
                                                         {% endfor %}
@@ -218,20 +230,16 @@
                                                         <select class="form-control select-service" id="srtype"
                                                                 name="srtype" required>
                                                             <option value="">Select the Type</option>
-                                                            <option value="Services & Maintenance" {% if
-                                                                    service_report.srtype==
-                                                            "Services & Maintenance" %}selected{% endif %}>Services &
+                                                            <option value="Services & Maintenance"
+                                                                    {% if service_report.srtype == "Services & Maintenance" %}selected{% endif %}>Services &
                                                             Maintenance</option>
-                                                            <option value="Troubleshooting" {% if
-                                                                    service_report.srtype==
-                                                            "Troubleshooting" %}selected{% endif
-                                                            %}>Troubleshooting</option>
-                                                            <option value="Testing & Commissioning" {% if
-                                                                    service_report.srtype==
-                                                            "Testing & Commissioning" %}selected{% endif %}>Testing &
+                                                            <option value="Troubleshooting"
+                                                                    {% if service_report.srtype == "Troubleshooting" %}selected{% endif %}>Troubleshooting</option>
+                                                            <option value="Testing & Commissioning"
+                                                                    {% if service_report.srtype == "Testing & Commissioning" %}selected{% endif %}>Testing &
                                                             Commissioning</option>
-                                                            <option value="Handing over" {% if service_report.srtype==
-                                                            "Handing over" %}selected{% endif %}>Handing over</option>
+                                                            <option value="Handing over"
+                                                                    {% if service_report.srtype == "Handing over" %}selected{% endif %}>Handing over</option>
 
                                                         </select>
 
@@ -243,18 +251,15 @@
                                                         <select class="form-control select-service" id="purpose"
                                                                 name="purpose" required>
                                                             <option value="">Select the Purpose</option>
-                                                            <option value="New Project" {% if service_report.srpurpose==
-                                                            "New Project" %}selected{% endif %}>New Project</option>
-                                                            <option value="Existing Project" {% if
-                                                                    service_report.srpurpose==
-                                                            "Existing Project" %}selected{% endif %}>Existing
+                                                            <option value="New Project"
+                                                                    {% if service_report.srpurpose == "New Project" %}selected{% endif %}>New Project</option>
+                                                            <option value="Existing Project"
+                                                                    {% if service_report.srpurpose == "Existing Project" %}selected{% endif %}>Existing
                                                             Project</option>
-                                                            <option value="Maintenance" {% if service_report.srpurpose==
-                                                            "Maintenance" %}selected{% endif %}>Maintenance</option>
-                                                            <option value="Troubleshooting" {% if
-                                                                    service_report.srpurpose==
-                                                            "Troubleshooting" %}selected{% endif
-                                                            %}>Troubleshooting</option>
+                                                            <option value="Maintenance"
+                                                                    {% if service_report.srpurpose == "Maintenance" %}selected{% endif %}>Maintenance</option>
+                                                            <option value="Troubleshooting"
+                                                                    {% if service_report.srpurpose == "Troubleshooting" %}selected{% endif %}>Troubleshooting</option>
 
                                                         </select>
 
@@ -287,29 +292,25 @@
                                                     <select class="form-control select-service" id="system"
                                                             name="system" required>
                                                         <option value="">Select the System</option>
-                                                        <option value="Structured Cabling System" {% if
-                                                                service_report.srsystem==
-                                                        "Structured Cabling System" %}selected{% endif %}>Structured
+                                                        <option value="Structured Cabling System"
+                                                                {% if service_report.srsystem == "Structured Cabling System" %}selected{% endif %}>Structured
                                                         Cabling System</option>
-                                                        <option value="IT Network System" {% if
-                                                                service_report.srsystem==
-                                                        "IT Network System" %}selected{% endif %}>IT Network
+                                                        <option value="IT Network System"
+                                                                {% if service_report.srsystem == "IT Network System" %}selected{% endif %}>IT Network
                                                         System</option>
-                                                        <option value="Telephone System" {% if service_report.srsystem==
-                                                        "Telephone System" %}selected{% endif %}>Telephone
+                                                        <option value="Telephone System"
+                                                                {% if service_report.srsystem == "Telephone System" %}selected{% endif %}>Telephone
                                                         System</option>
-                                                        <option value="CCTV System" {% if service_report.srsystem==
-                                                        "CCTV System" %}selected{% endif %}>CCTV System</option>
-                                                        <option value="Access Control System" {% if
-                                                                service_report.srsystem==
-                                                        "Access Control System" %}selected{% endif %}>Access Control
+                                                        <option value="CCTV System"
+                                                                {% if service_report.srsystem == "CCTV System" %}selected{% endif %}>CCTV System</option>
+                                                        <option value="Access Control System"
+                                                                {% if service_report.srsystem == "Access Control System" %}selected{% endif %}>Access Control
                                                         System</option>
-                                                        <option value="Audio Video Intercom System" {% if
-                                                                service_report.srsystem==
-                                                        "Audio Video Intercom System" %}selected{% endif %}>Audio Video
+                                                        <option value="Audio Video Intercom System"
+                                                                {% if service_report.srsystem == "Audio Video Intercom System" %}selected{% endif %}>Audio Video
                                                         Intercom System</option>
-                                                        <option value="Home Automation" {% if service_report.srsystem==
-                                                        "Home Automation" %}selected{% endif %}>Home Automation</option>
+                                                        <option value="Home Automation"
+                                                                {% if service_report.srsystem == "Home Automation" %}selected{% endif %}>Home Automation</option>
 
                                                     </select>
 
@@ -660,12 +661,18 @@
 {% endblock %}
 {% block scripts %}
 <script src="{% static 'assets/libs/select2/js/select2.full.min.js' %}"></script>
+<script src="{% static 'assets/libs/bootstrap-datepicker/js/bootstrap-datepicker.min.js' %}"></script>
 <script src="{% static 'assets/libs/datatables.net/js/jquery.dataTables.min.js' %}"></script>
 <script src="{% static 'assets/libs/datatables.net-bs4/js/dataTables.bootstrap4.min.js' %}"></script>
 <!-- Responsive examples -->
 <script src="{% static 'assets/libs/datatables.net-responsive/js/dataTables.responsive.min.js' %}"></script>
 <script src="{% static 'assets/libs/datatables.net-responsive-bs4/js/responsive.bootstrap4.min.js' %}"></script>
 <script src="{% static 'assets/js/flatpicker.js' %}"></script>
+<script src="{% static 'assets/js/jSignature/jSignature.js' %}"></script>
+<script src="{% static 'assets/js/jSignature/plugins/jSignature.CompressorBase30.js' %}"></script>
+<script src="{% static 'assets/js/jSignature/plugins/jSignature.CompressorSVG.js' %}"></script>
+<script src="{% static 'assets/js/jSignature/plugins/jSignature.UndoButton.js' %}"></script>
+<script src="{% static 'assets/js/jSignature/plugins/signhere/jSignature.SignHere.js' %}"></script>
 <script>
     var $sigdiv = $("#signature").jSignature({'UndoButton':true, height: 150, width: 720, 'decor-color': 'transparent'});
     $("#SrDetailForm input").prop("disabled", true);
@@ -915,6 +922,19 @@
         window.print();
         return false;
     });
+    function formatDate(date) {
+        var d = new Date(date),
+            month = '' + (d.getMonth() + 1),
+            day = '' + d.getDate(),
+            year = d.getFullYear();
+
+        if (month.length < 2)
+            month = '0' + month;
+        if (day.length < 2)
+            day = '0' + day;
+
+        return [year, month, day].join('-');
+    }
     function formatDateTime(date) {
         var d = new Date(date),
             month = '' + (d.getMonth() + 1),
@@ -959,7 +979,7 @@
         $(".btn_serviceadd").html('Update');
         $.ajax({
             headers: { "X-CSRFToken": '{{csrf_token}}' },
-            url: '{% url "ajax_get_service_sign" %}',
+            url: '{% url "ajax_get_mainsrsignature_sign" %}',
             data: {
                 serviceid: $("#serviceid").val()
             },
@@ -975,6 +995,50 @@
         });
         $("#servicesignmodal").modal('show');
     }
+
+
+    $(".btn_serviceadd").on('click', function(e){
+        var signature = $sigdiv.jSignature('getData', 'native');
+        console.log($sigdiv.jSignature('getData', 'default'))
+        $('#ServiceSignForm').parsley().validate();
+        if ($('#ServiceSignForm').parsley().validate() === false) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+        }
+        else {
+            if( signature.length == 0) {
+                alert('Please Enter Signature..');
+            } else {
+                $.ajax({
+                headers: { "X-CSRFToken": '{{csrf_token}}' },
+                url: '{% url "ajax_add_mainsrsignature_sign" %}',
+                data: {
+                    name: $("#service_name").val(),
+                    nric: $("#service_nric").val(),
+                    date: formatDate($("#service_date").val()),
+                    srid: `{{service_pk}}`,
+                    projectid:`{{project_pk}}`,
+                    signature: JSON.stringify(signature),
+                    default_base64: $sigdiv.jSignature('getData', 'default'),
+                    serviceid: $("#serviceid").val()
+                },
+                type: 'POST',
+                success: function (data) {
+                    if(data.status=="Success"){
+                        $("#text_error_service_sign").hide();
+                        location.reload();
+                    } else {
+                        $("#text_error_service_sign").html(data.messages);
+                        $("#text_error_service_sign").show();
+                    }
+                }
+            });
+            }
+
+        }
+
+    });
 
 </script>
 {% endblock %}
