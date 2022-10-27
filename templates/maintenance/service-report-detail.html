@@ -241,6 +241,10 @@
                                                             <option value="Handing over"
                                                                     {% if service_report.srtype == "Handing over" %}selected{% endif %}>Handing over</option>
 
+                                                            <option value="Others: Please specify in Remarks"
+                                                                    {% if service_report.srtype == "Others: Please specify in Remarks" %}selected{% endif %}>Others: Please specify in Remarks</option>
+
+
                                                         </select>
 
                                                     </div>
@@ -260,6 +264,8 @@
                                                                     {% if service_report.srpurpose == "Maintenance" %}selected{% endif %}>Maintenance</option>
                                                             <option value="Troubleshooting"
                                                                     {% if service_report.srpurpose == "Troubleshooting" %}selected{% endif %}>Troubleshooting</option>
+                                                            <option value="Others: Please specify in Remarks"
+                                                                    {% if service_report.srpurpose == "Others: Please specify in Remarks" %}selected{% endif %}>Others: Please specify in Remarks</option>
 
                                                         </select>
 
@@ -311,6 +317,10 @@
                                                         Intercom System</option>
                                                         <option value="Home Automation"
                                                                 {% if service_report.srsystem == "Home Automation" %}selected{% endif %}>Home Automation</option>
+
+                                                        <option value="Others: Please specify in Remarks"
+                                                                {% if service_report.srsystem == "Others: Please specify in Remarks" %}selected{% endif %}>Others: Please specify in Remarks</option>
+
 
                                                     </select>
 

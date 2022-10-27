@@ -818,7 +818,9 @@ def exportMainSrPDF(request, value):
          Paragraph('''<para align=center><font size=16><b>SERVICE REPORT</b></font></para>''')],
 
         ["", "", "", "", "", ""],
-        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
+        # ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
+        #  "", "", Paragraph('''<para align=left><font size=10><b>SR No:</b> %s</font></para>''' % (sr.sr_no))],
+        ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address)), "",
          "", "", Paragraph('''<para align=left><font size=10><b>SR No:</b> %s</font></para>''' % (sr.sr_no))],
         ["", "", "", "", "", Paragraph(
             '''<para align=left><font size=10><b>Maintenance No.:</b> %s</font></para>''' % (maintenance.main_no))],
