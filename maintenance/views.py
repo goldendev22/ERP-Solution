@@ -811,11 +811,13 @@ def exportMainSrPDF(request, value):
         time_in = sr.time_in.strftime('%d/%m/%Y %H:%M')
     else:
         time_in = " "
+
     srinfordata = [
         [Paragraph('''<para align=left><font size=10><b>To: </b></font></para>'''),
          Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.company_name)), "", "", "",
          Paragraph('''<para align=center><font size=16><b>SERVICE REPORT</b></font></para>''')],
 
+        ["", "", "", "", "", ""],
         ["", Paragraph('''<para align=left><font size=10>%s</font></para>''' % (quotation.address + "  " + qunit)), "",
          "", "", Paragraph('''<para align=left><font size=10><b>SR No:</b> %s</font></para>''' % (sr.sr_no))],
         ["", "", "", "", "", Paragraph(
@@ -835,8 +837,8 @@ def exportMainSrPDF(request, value):
             '''<para align=left><font size=10><b>Worksite: </b> %s</font></para>''' % (maintenance.worksite_address)),
             "", "", "", "", ""],
         ["", "", "", "", "", ""],
-        [Paragraph('''<para align=left><font size=10><b>Service Type: </b> %s</font></para>''' % (srtype)), "", "", "",
-         "", Paragraph('''<para align=left><font size=10><b>Time In: </b> %s</font></para>''' % (time_in))],
+        [Paragraph('''<para align=left><font size=10><b>Service Type: </b> %s</font></para>''' % (srtype)), "", "", "", "",
+         Paragraph('''<para align=left><font size=10><b>Time In: </b> %s</font></para>''' % (time_in))],
         [Paragraph('''<para align=left><font size=10><b>System: </b> %s</font></para>''' % (srsystem)), "", "", "", "",
          Paragraph('''<para align=left><font size=10><b>Time Out: </b> %s</font></para>''' % (time_out))],
         [Paragraph('''<para align=left><font size=10><b>Purpose: </b> %s</font></para>''' % (srpurpose)), "", "", "",
@@ -849,23 +851,25 @@ def exportMainSrPDF(request, value):
         srinfordata,
         style=[
             ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-            ('ALIGN', (1, 0), (1, 0), 'LEFT'),
             ('VALIGN', (0, 0), (-1, 0), 'BOTTOM'),
             ('SPAN', (0, -3), (1, -3)),
-            ('ALIGN', (5, 0), (5, -1), 'CENTER'),
+            # ('ALIGN', (5, 0), (5, -1), 'CENTER'),
+            ('SPAN', (1, 2), (-2, 2)),
             ('SPAN', (3, 4), (4, 4)),
+            ('SPAN', (0, 8), (-2, 8)),
             ('SPAN', (0, 7), (-1, 7)),
             ('SPAN', (0, 9), (-2, 9)),
             ('SPAN', (0, 10), (-2, 10)),
             ('SPAN', (0, 11), (-1, 11)),
+            ('SPAN', (0, 12), (-1, 12)),
 
         ]
     )
 
-    information._argW[0] = 0.8 * inch
-    information._argW[1] = 1.28 * inch
+    information._argW[0] = 1.1 * inch
+    information._argW[1] = 1.38 * inch
     information._argW[2] = 0.8 * inch
-    information._argW[3] = 1.38 * inch
+    information._argW[3] = 1.08 * inch
     information._argW[4] = 0.89 * inch
     information._argW[5] = 2.17 * inch
     story.append(Spacer(1, 16))
@@ -1154,7 +1158,7 @@ def addMainSrSign(request):
         date = request.POST.get('date')
         signature = request.POST.get('signature')
         serviceid = request.POST.get('serviceid')
-        projectid = request.POST.get('projectid')
+        maintenance_id = request.POST.get('maintenance_id')
         default_base64 = request.POST.get("default_base64")
         srid = request.POST.get('srid')
 
@@ -1170,7 +1174,7 @@ def addMainSrSign(request):
                     update_date=date,
                     signature=signature,
                     sr_id=srid,
-                    project_id=projectid,
+                    maintenance_id=maintenance_id,
                     signature_image=signature_image
                 )
                 return JsonResponse({
@@ -1190,7 +1194,7 @@ def addMainSrSign(request):
                 srsignature.update_date = date
                 srsignature.signature = signature
                 srsignature.sr_id = srid
-                srsignature.project_id = projectid
+                srsignature.maintenance_id = maintenance_id
                 srsignature.signature_image = signature_image
                 srsignature.save()
 

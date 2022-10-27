@@ -953,7 +953,9 @@
 
         return year + "-" + month + "-" + day + " " + hour + ":" +  min
     }
-
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        ];
     $("#serviceedit").on('click', function(e){
         $("#serviceid").val('-1');
         $("#head_title_sr_signature").html('Add New Service Signature');
@@ -1018,7 +1020,7 @@
                     nric: $("#service_nric").val(),
                     date: formatDate($("#service_date").val()),
                     srid: `{{service_pk}}`,
-                    projectid:`{{project_pk}}`,
+                    maintenance_id:`{{maintenance_pk}}`,
                     signature: JSON.stringify(signature),
                     default_base64: $sigdiv.jSignature('getData', 'default'),
                     serviceid: $("#serviceid").val()
