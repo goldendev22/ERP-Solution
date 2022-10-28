@@ -1023,17 +1023,17 @@ class OtcalculationFilterSummary(ListView):
 @ajax_login_required
 def ajax_otcalculation(request):
     if request.method == "POST":
-        # current_year = datetime.datetime.today().year
-        # current_month = datetime.datetime.today().month
-        # str_query = "SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O" \
-        #             " WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date) AND YEAR(W.checkin_time) = " + str(
-        #     current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
+        current_year = datetime.datetime.today().year
+        current_month = datetime.datetime.today().month
+        str_query = "SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O" \
+                    " WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date) AND YEAR(W.checkin_time) = " + str(
+            current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
 
         # For test
-        current_year = "2022"
-        current_month = "8"
-        str_query = "SELECT W.id, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W where YEAR(W.checkin_time) = " + str(
-            current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
+        # current_year = "2022"
+        # current_month = "8"
+        # str_query = "SELECT W.id, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W where YEAR(W.checkin_time) = " + str(
+        #     current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
 
         query_ots = WorkLog.objects.raw(str_query)
 

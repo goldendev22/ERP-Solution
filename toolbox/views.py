@@ -93,7 +93,8 @@ def toolboxadd(request):
                     project_name=project.proj_name,
                     date=date,
                 )
-                tbm_items = ToolBoxItem.objects.filter(project_id=project.id)
+                # tbm_items = ToolBoxItem.objects.filter(project_id=project.id)
+                tbm_items = ToolBoxItem.objects.filter()
                 for tbm_item in tbm_items:
                     ToolBoxLogItem.objects.create(
                         objective=tbm_item.objective,
@@ -133,7 +134,7 @@ def toolboxadd(request):
                 return JsonResponse({
                     "status": "Success",
                     "messages": "ToolBox information updated!",
-                    "tbmid": toolbox.id,
+                    "tbmid": tbm.id,
                     "method": "add"
                 })
 
