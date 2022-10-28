@@ -5,7 +5,7 @@ import sales
 from django.contrib.auth import login, logout
 from accounts import models
 from accounts.models import NotificationPrivilege, User, Role, WorkLog, MaterialLog, AssetLog, Holiday, OTCalculation, \
-    Privilege, UserCert, UserAddress, UserItemIssued, UserItemTool
+    Privilege, UserCert, UserAddress, UserItemIssued, UserItemTool, Uom
 from django.urls import reverse_lazy
 from django.contrib.auth.forms import AuthenticationForm
 from django.views.generic import FormView, RedirectView
@@ -349,6 +349,7 @@ class UserDetailView(DetailView):
         current_user = User.objects.get(id=content_pk)
         context['countrys'] = Country.objects.all()
         context['roles'] = Role.objects.all()
+        context['uoms'] = Uom.objects.all()
         context['certificates'] = UserCert.objects.filter(emp_id__iexact=current_user.username)
         context['issuedtools'] = UserItemTool.objects.filter(emp_id__iexact=current_user.username)
         context['selected_user'] = content_pk
@@ -360,7 +361,9 @@ class UserDetailView(DetailView):
 
         context['issueditems'] = UserItemIssued.objects.filter(empid__iexact=current_user.empid)
         context['issueusers'] = User.objects.filter(
-            Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
+            Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin'))
+        # context['issueusers'] = User.objects.filter(
+        #     Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin') | Q(is_staff=True))
         return context
 
 
@@ -736,6 +739,8 @@ class MateriallogList(ListView):
             'material_code').distinct()
         context['materialnames'] = MaterialLog.objects.exclude(project_name=None).order_by('project_name').values(
             'project_name').distinct()
+        context['projects'] = Project.objects.filter(proj_status="On-going").order_by('proj_name').values(
+            'proj_name').distinct()
         return context
 
 
@@ -1740,7 +1745,7 @@ def userissuetooladd(request):
                 UserItemTool.objects.create(
                     description=tdescription,
                     issue_date=tissued_date,
-                    uom=tuom,
+                    uom=Uom.objects.get(name=tuom),
                     qty=tqty,
                     issued_by=tissued_by,
                     emp_id=sel_user.username
@@ -1793,7 +1798,7 @@ def userissueppeadd(request):
                 UserItemIssued.objects.create(
                     description=idescription,
                     issue_date=issued_date,
-                    uom=iuom,
+                    uom=Uom.objects.get(name=iuom),
                     qty=iqty,
                     empid=sel_user.empid,
                     issued_by=issued_by

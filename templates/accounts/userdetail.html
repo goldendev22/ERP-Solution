@@ -615,8 +615,15 @@
                     <div class="mb-3 row">
                         <label for="iuom" class="col-md-4 col-form-label">UOM:</label>
                         <div class="col-md-8">
-                            <input class="form-control" type="text" id="iuom" required>
+                            <select class="form-control select2" id="iuom" required>
+                                <option value="">Select the Uom</option>
+                                {% for uom in uoms %}
+                                    <option value="{{uom.name}}">{{uom.name}}</option>
+                                {% endfor %}
+                            </select>
+<!--                            <input class="form-control" type="text" id="iuom" required>-->
                         </div>
+
                     </div>
                     <div class="mb-3 row">
                         <label for="issued_date" class="col-md-4 col-form-label">Issued Date:</label>
@@ -677,12 +684,20 @@
                             <input class="form-control" type="number" id="tqty" required>
                         </div>
                     </div>
+
+
                     <div class="mb-3 row">
                         <label for="tuom" class="col-md-4 col-form-label">UOM:</label>
                         <div class="col-md-8">
-                            <input class="form-control" type="text" id="tuom" required>
+                            <select class="form-control select2" id="tuom" required>
+                                <option value="">Select the Uom</option>
+                                {% for uom in uoms %}
+                                    <option value="{{uom.name}}">{{uom.name}}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
+
                     <div class="mb-3 row">
                         <label for="tissued_date" class="col-md-4 col-form-label">Issued Date:</label>
                         <div class="col-md-8">
@@ -748,6 +763,10 @@
             "<'row'<'col-sm-12'tr>>" +
             "<'row'<'col-sm-2 text-start'i><'col-sm-2 mt-2 text-start'l><'col-sm-8 mt-2'p>>",
     });
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
     $("#ppetable").DataTable({
         searching: false, 
         paging: true, 
@@ -777,6 +796,7 @@
     $(".select2").select2({width: '100%'});
     $('#issued_by').prop('disabled', false);
     $(".tissued_by").select2({width: '100%', dropdownParent: $("#manage_info_tool")});
+    $("#tuom").select2({width: '100%', dropdownParent: $("#manage_info_tool")});
     function generatepassword(length) {
         var result           = '';
         var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -804,24 +824,35 @@
         $("#certmodal").modal('show');
     });
     $("#ppesave").on("click", function(e){
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = monthNames[today.getMonth()];
+        var yyyy = today.getFullYear();
+        $("#issued_date").val(dd + " " + mm + ", " + yyyy);
+        $('#issued_date').datepicker('setDate', dd + " " + mm + ", " + yyyy);
+
         $("#head_title").html('Add New Issued');
         $(".btn_issueadd").html('Add');
         $("#issueid").val("-1");
         $("#idescription").val("");
         $("#iqty").val("");
-        $("#iuom").val("");
-        $("#issued_date").val("");
         
         $("#issuemodal").modal('show');
     });
+
     $("#toolssave").on("click", function(e){
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = monthNames[today.getMonth()];
+        var yyyy = today.getFullYear();
+        $("#tissued_date").val(dd + " " + mm + ", " + yyyy);
+        $('#tissued_date').datepicker('setDate', dd + " " + mm + ", " + yyyy);
+
         $("#head_title").html('Add New Issued');
         $(".btn_issueadd").html('Add');
         $("#toolid").val("-1");
         $("#tdescription").val("");
         $("#tqty").val("");
-        $("#tuom").val("");
-        $("#tissued_date").val("");
         
         $("#toolmodal").modal('show');
     });
@@ -998,6 +1029,7 @@
         $("#userupdate").show();
     });
     $("#issued_by").select2({width: '100%', dropdownParent: $("#manage_info_issue")});
+    $("#iuom").select2({width: '100%', dropdownParent: $("#manage_info_issue")});
     function formatDate(date) {
         var d = new Date(date),
             month = '' + (d.getMonth() + 1),

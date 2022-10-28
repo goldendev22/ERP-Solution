@@ -175,8 +175,15 @@
                     
                     <div class="mb-3 mt-3 row">
                         <label for="project_name" class="col-md-4 col-form-label">Project Name:</label>
+
                         <div class="col-md-8">
-                            <input class="form-control" type="text"  id="project_name" required>
+                            <select class="form-control" id="project_name" required>
+                                <option value="">Select the Project Name</option>
+                                {% for project in projects %}
+                                    <option value="{{project.proj_name}}">{{project.proj_name}}</option>
+                                {% endfor %}
+
+                            </select>
                         </div>
                     </div>
                     
