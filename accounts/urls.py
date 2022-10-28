@@ -78,4 +78,6 @@ urlpatterns = [
     url(r'^ot-calculation-filter-summary/(?P<checkin_time>[^/]+)/(?P<checkout_time>[^/]+)/$', views.OtcalculationFilterSummary.as_view(), name='ot_calculation_filter_summary'),
     url(r'^ajax_summary_filter_otcalculate/$', views.ajax_otcalculation_filter_summary, name='ajax_summary_filter_otcalculate'),
 
+    url(r'^ajax_delete_cert/$', views.certdelete, name='ajax_delete_cert'),
+    url(r'^ajax_get_cert/$', views.getCert, name='ajax_get_cert'),
 ]

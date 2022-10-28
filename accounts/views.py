@@ -1856,3 +1856,24 @@ def updateUserSignature(request):
                 "status": "Error",
                 "messages": "Error is existed!"
             })
+@ajax_login_required
+def certdelete(request):
+    if request.method == "POST":
+        certid = request.POST.get('certdel_id')
+        usercert = UserCert.objects.get(id=certid)
+        usercert.delete()
+        return JsonResponse({'status': 'ok'})
+
+@ajax_login_required
+def getCert(request):
+    if request.method == "POST":
+        certId = request.POST.get('certid')
+        userCert = UserCert.objects.get(id=certId)
+        data = {
+            'emp_id': userCert.emp_id,
+            'course': userCert.course,
+            'course_no': userCert.course_no,
+            'school': userCert.school,
+            'course_expiry': userCert.course_expiry.strftime('%d %b %Y'),
+        }
+        return JsonResponse(json.dumps(data), safe=False)

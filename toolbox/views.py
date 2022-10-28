@@ -213,8 +213,9 @@ class ToolBoxDetailView(DetailView):
         project = Project.objects.get(proj_id__iexact=tbm.project_no)
         context['toolbox_pk'] = content_pk
         context['project'] = project
-        context['user_roles']=Role.objects.all()
-        context['supervisors'] = User.objects.filter(role="Supervisors")
+        # context['user_roles']=Role.objects.all()
+        # context['supervisors'] = User.objects.filter(role="Supervisors")
+        context['supervisors'] = User.objects.exclude(role="Worker")
         context['toolboxitems'] = ToolBoxLogItem.objects.filter(project_id=project.id, toolbox_id=content_pk)
         quotation = Quotation.objects.get(qtt_id__iexact=project.proj_id.replace('CPJ','').strip())
         projectitemactivitys = Scope.objects.filter(quotation_id=quotation.id)
