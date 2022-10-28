@@ -107,9 +107,13 @@
                                                 <label class="form-label" for="supervisor">Supervisor</label>
                                                 <select class="form-control select2" id="supervisor" name="supervisor" required>
                                                     <option value="">Select Supervisor</option>
-                                                    {% for suser in supervisors %}
-                                                        <option value="{{suser.username}}" {% if suser.username == tbm.supervisor %} selected{% endif %}>{{suser.username}}</option>
+<!--                                                    {% for suser in supervisors %}-->
+<!--                                                        <option value="{{suser.username}}" {% if suser.username == tbm.supervisor %} selected{% endif %}>{{suser.username}}</option>-->
+<!--                                                    {% endfor %}-->
+                                                    {% for role in user_roles %}
+                                                        <option value="{{role.name}}" {% if role.name == tbm.supervisor %} selected{% endif %}>{{role.name}}</option>
                                                     {% endfor %}
+
                                                 </select>
                                             </div>
                                         </div>
