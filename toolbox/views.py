@@ -93,8 +93,7 @@ def toolboxadd(request):
                     project_name=project.proj_name,
                     date=date,
                 )
-                # tbm_items = ToolBoxItem.objects.filter(project_id=project.id)
-                tbm_items = ToolBoxItem.objects.filter()
+                tbm_items = ToolBoxItem.objects.filter(project_id=project.id)
                 for tbm_item in tbm_items:
                     ToolBoxLogItem.objects.create(
                         objective=tbm_item.objective,
