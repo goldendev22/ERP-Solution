@@ -292,26 +292,34 @@
                                 {% for objective in tbm_objectives %}
                                     <option value="{{objective.classify}}" data-id="{{objective.id}}">{{objective.classify}}</option>
                                 {% endfor %}
+                                <option value="Others" data-id="-1">Others</option>
                             </select>
                         </div>
                     </div>
                     <div class="mb-3 row">
                         <label for="toolbox_description" class="col-md-4 col-form-label">Description:</label>
                         <div class="col-md-8">
-                            <select class="form-control" id="toolbox_description" required>
-                                <option value="">Select..</option>
-                                {% for description in tbm_descriptions %}
-                                    <option value="{{description.description}}">{{description.description}}</option>
-                                {% endfor %}
-                            </select>
+
+                            <div id="toolbox_description_div">
+                                <select class="form-control" id="toolbox_description" required>
+                                    <option value="">Select..</option>
+                                    {% for description in tbm_descriptions %}
+                                        <option value="{{description.description}}">{{description.description}}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div id="toolbox_description_text_div">
+                                <textarea class="form-control" type="text" rows="3" id="toolbox_description_text"></textarea>
+                            </div>
                         </div>
                     </div>
-                    <div class="mb-3 row">
-                        <label for="toolbox_remark" class="col-md-4 col-form-label">Remark:</label>
-                        <div class="col-md-8">
-                            <textarea class="form-control" type="text" rows="3" id="toolbox_remark"></textarea>
-                        </div>
-                    </div>
+<!--                    <div class="mb-3 row">-->
+<!--                        <label for="toolbox_remark" class="col-md-4 col-form-label">Remark:</label>-->
+<!--                        <div class="col-md-8">-->
+<!--                            <textarea class="form-control" type="text" rows="3" id="toolbox_remark"></textarea>-->
+<!--                        </div>-->
+<!--                    </div>-->
                 </form>
                 <input type="hidden" id="toolboxid" value="-1" />
             
@@ -555,7 +563,7 @@
     $("#toolboxitemadd").on('click', function(e){
         $("#toolboxid").val('-1');
         $("#head_title_toolbox").html('Add ToolBox Objectives');
-        $(".btn_tooboxadd").html('Add');
+        $(".btn_toolboxadd").html('Add');
         $("#toolbox_description").val('');
         $("#toolbox_description").trigger('change');
         $("#toolbox_objective").val('');
@@ -572,14 +580,19 @@
                 return;
         }
         else {
+            let description="";
+            if($("#toolbox_objective").val()=="Others"){
+                description=$("#toolbox_description_text").val()
+            }else{
+                description=$("#toolbox_description").val()
+            }
             $.ajax({
                 headers: { "X-CSRFToken": '{{csrf_token}}' },
                 url: '{% url "ajax_add_toolboxlog_item" %}',
                 data: {
-                    description: $("#toolbox_description").val(),
+                    description: description,
                     activity: $("#toolbox_activity").val(),
                     objective: $("#toolbox_objective").val(),
-                    remark: $("#toolbox_remark").val(),
                     manager: "Supervisor",
                     projectid: `{{project.id}}`,
                     tbmpk: `{{toolbox_pk}}`,
@@ -601,22 +614,39 @@
         
     });
     flag = true;
+    $('#toolbox_description_div').css("display", "block");
+    $('#toolbox_description_text_div').css("display", "none");
     $("#toolbox_objective").on('change', function(e){
         var toolbox_objective = $(this).find(':selected').data('id');
+
+        if(toolbox_objective=="-1"){
+            $('#toolbox_description_div').css("display", "none");
+            $('#toolbox_description').prop("required", false);
+            $('#toolbox_description_text').prop("required", true);
+            $('#toolbox_description_text_div').css("display", "block");
+        }
+        else{
+            $('#toolbox_description_div').css("display", "block");
+            $('#toolbox_description').prop("required", true);
+            $('#toolbox_description_text').prop("required", false);
+            $('#toolbox_description_text_div').css("display", "none");
         if(toolbox_objective != "" && flag == true){
-            $("#toolbox_description").html('');
-            $.ajax({
-                headers: { "X-CSRFToken": '{{csrf_token}}' },
-                url: '{% url "ajax_filter_description" %}',
-                data: {
-                    toolbox_objective: toolbox_objective,
-                },
-                type: 'POST',
-                success: function (data) {
-                    $("#toolbox_description").html(data);
-                    
-                }
-            });
+
+                $("#toolbox_description").html('');
+                $.ajax({
+                    headers: { "X-CSRFToken": '{{csrf_token}}' },
+                    url: '{% url "ajax_filter_description" %}',
+                    data: {
+                        toolbox_objective: toolbox_objective,
+                    },
+                    type: 'POST',
+                    success: function (data) {
+                        $("#toolbox_description").html(data);
+
+                    }
+                });
+            }
+
         }
     });
     $("#attendeesignadd").on('click', function(e){
@@ -726,14 +756,16 @@
             success: function (data) {
                 up_data = JSON.parse(data);
                 flag = false;
-                
                 $("#toolbox_activity").val(up_data.activity);
-                $('#toolbox_activity').trigger('change'); 
-                $("#toolbox_objective").val(up_data.objective);  
-                $('#toolbox_objective').trigger('change'); 
-                $("#toolbox_description").val(up_data.description);
-                $('#toolbox_description').trigger('change'); 
-                $("#toolbox_remark").val(up_data.remark); 
+                $('#toolbox_activity').trigger('change');
+                $("#toolbox_objective").val(up_data.objective);
+                $('#toolbox_objective').trigger('change');
+                if(up_data.objective=="Others"){
+                    $("#toolbox_description_text").val(up_data.description);
+                }else{
+                    $("#toolbox_description").val(up_data.description);
+                }
+                $('#toolbox_description').trigger('change');
                 
             }
         });
