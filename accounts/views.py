@@ -860,7 +860,7 @@ def getMateriallog(request):
             'emp_no': materiallog.emp_no,
             'material_code': materiallog.material_code,
             'project_name': materiallog.project_name,
-            'comment': materiallog.material_out,
+            'material_out': materiallog.material_out,
             'comment': materiallog.comment,
             'date_time': materiallog.date_time.strftime('%d %b, %Y %H:%M')
 
