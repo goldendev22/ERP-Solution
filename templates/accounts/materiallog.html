@@ -278,16 +278,25 @@
         $("#text_error").hide();
     });
     window.Parsley.addValidator('materialout', {
-          validateString: function(value) {
-
-            let qty = $("#material_code").find('option:selected').data('qty')
+          validateString: function(value,id, instance) {
+            var msg = '';
+            var container = instance.$element.closest('.form-item');
+            var helpContainer = '<ul class="parsley-errors-list filled"><li class="parsley-age"></li></ul>';
+            let qty = $("#material_code").find('option:selected').data('qty');
             if(value<=0 || value>qty)
-                return false;
-            return true;
+                msg = 'value should be from 1 to '+qty;
+            if(msg !== ''){
+                container.append(helpContainer);
+                container.find('.parsley-age').html(msg)
+                return $.Deferred().reject(msg);
+            } else {
+                container.find('select').filter(function(){ return this.value}).parent().addClass('parsley-success');
+                return true;
+            }
           },
-          messages: {
-            en: 'Cannot be null / zero / more than available stock quantity.'
-          }
+<!--          messages: {-->
+<!--            en: 'value should be from 1 to '+$("#material_code").find('option:selected').data('qty')-->
+<!--          }-->
         });
     $("#date_time").flatpickr({
         enableTime: true,
