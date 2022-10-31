@@ -3315,9 +3315,9 @@ def exportDoPDF(request, value):
         bill_to2 = '''
             <para align=left>
                 <font size=10>%s</font><br/>
-                <font size=10>%s</font>
             </para> 
-        ''' % (quotation.address + " " + str(qunit), str(country) + " " + str(postalcode))
+        ''' % (quotation.address)
+        # ''' % (quotation.address + " " + str(qunit), str(country) + " " + str(postalcode))
     else:
         bill_to2 = '''
             <para align=left>
