@@ -80,4 +80,8 @@ urlpatterns = [
 
     url(r'^ajax_delete_cert/$', views.certdelete, name='ajax_delete_cert'),
     url(r'^ajax_get_cert/$', views.getCert, name='ajax_get_cert'),
+    url(r'^ajax_delete_issued/$', views.issueddelete, name='ajax_delete_issued'),
+    url(r'^ajax_get_issued_item/$', views.getIssuedItem, name='ajax_get_issued_item'),
+    url(r'^ajax_delete_toolItem/$', views.toolItemdelete, name='ajax_delete_toolItem'),
+    url(r'^ajax_get_tool_item/$', views.getToolItem, name='ajax_get_tool_item'),
 ]

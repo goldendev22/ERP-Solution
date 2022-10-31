@@ -1769,7 +1769,7 @@ def userissuetooladd(request):
                 usertool = UserItemTool.objects.get(id=toolid)
                 usertool.description = tdescription
                 usertool.issue_date = tissued_date
-                usertool.uom = tuom
+                usertool.uom=Uom.objects.get(name=tuom)
                 usertool.qty = tqty
                 usertool.issued_by = tissued_by
                 usertool.emp_id = sel_user.username
@@ -1812,6 +1812,27 @@ def userissueppeadd(request):
                     "status": "Success",
                     "messages": "User Issued Item information added!"
                 })
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+        else:
+            try:
+                userItemIssue = UserItemIssued.objects.get(id=issueid)
+                userItemIssue.description = idescription
+                userItemIssue.issue_date = issued_date
+                userItemIssue.uom = Uom.objects.get(name=iuom)
+                userItemIssue.qty = iqty
+                userItemIssue.issued_by = issued_by
+                userItemIssue.emp_id = sel_user.empid
+                userItemIssue.save()
+
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "User Issued Item information updated!"
+                })
+
             except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
@@ -1885,6 +1906,53 @@ def getCert(request):
             'course_no': userCert.course_no,
             'school': userCert.school,
             'course_expiry': userCert.course_expiry.strftime('%d %b %Y'),
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+
+
+@ajax_login_required
+def issueddelete(request):
+    if request.method == "POST":
+        issuedid = request.POST.get('issueddel_id')
+        userIssued = UserItemIssued.objects.get(id=issuedid)
+        userIssued.delete()
+        return JsonResponse({'status': 'ok'})
+
+@ajax_login_required
+def getIssuedItem(request):
+    if request.method == "POST":
+        issueId = request.POST.get('issueId')
+        userItemIssued = UserItemIssued.objects.get(id=issueId)
+        data = {
+            'issueid': userItemIssued.id,
+            'idescription': userItemIssued.description,
+            'iqty': userItemIssued.qty,
+            'issued_by': userItemIssued.issued_by,
+            'uom': userItemIssued.uom.name,
+            'issued_date': userItemIssued.issue_date.strftime('%d %b %Y'),
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+
+@ajax_login_required
+def toolItemdelete(request):
+    if request.method == "POST":
+        toolid = request.POST.get('tooldel_id')
+        userItemTool = UserItemTool.objects.get(id=toolid)
+        userItemTool.delete()
+        return JsonResponse({'status': 'ok'})
+
+@ajax_login_required
+def getToolItem(request):
+    if request.method == "POST":
+        toolId = request.POST.get('toolId')
+        userItemIssued = UserItemTool.objects.get(id=toolId)
+        data = {
+            'toolid': userItemIssued.id,
+            'tdescription': userItemIssued.description,
+            'tqty': userItemIssued.qty,
+            'tissued_by': userItemIssued.issued_by,
+            'tuom': userItemIssued.uom.name,
+            'tissued_date': userItemIssued.issue_date.strftime('%d %b %Y'),
         }
         return JsonResponse(json.dumps(data), safe=False)
 
