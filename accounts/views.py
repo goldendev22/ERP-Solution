@@ -1,5 +1,6 @@
 import os
 from accounts.resources import WorkLogResource
+from inventory.models import Material
 from project.models import Project
 import sales
 from django.contrib.auth import login, logout
@@ -734,9 +735,13 @@ class MateriallogList(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['empids'] = User.objects.filter(
+            Q(role__icontains='Supervisors') | Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin'))\
+            .order_by('empid').values('empid').distinct()
         context['emp_nos'] = MaterialLog.objects.exclude(emp_no=None).order_by('emp_no').values('emp_no').distinct()
         context['materialcodes'] = MaterialLog.objects.exclude(material_code=None).order_by('material_code').values(
             'material_code').distinct()
+        context['materials'] = Material.objects.exclude(material_code=None).order_by('material_code').distinct()
         context['materialnames'] = MaterialLog.objects.exclude(project_name=None).order_by('project_name').values(
             'project_name').distinct()
         context['projects'] = Project.objects.filter(proj_status="On-going").order_by('proj_name').values(
@@ -1882,3 +1887,4 @@ def getCert(request):
             'course_expiry': userCert.course_expiry.strftime('%d %b %Y'),
         }
         return JsonResponse(json.dumps(data), safe=False)
+

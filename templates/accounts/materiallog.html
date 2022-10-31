@@ -3,6 +3,7 @@
 {% block page-title %}Material Log{% endblock%}
 {% block css %}
     <link href="{% static 'assets/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
+<link href="{% static 'assets/libs/bootstrap-datepicker/css/bootstrap-datepicker.min.css' %}" rel="stylesheet">
     <!-- DataTables -->
     <link href="{% static 'assets/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" />
     <link href="{% static 'assets/libs/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" />
@@ -163,13 +164,25 @@
                     <div class="mb-3 row">
                         <label for="emp_no" class="col-md-4 col-form-label">Emp No:</label>
                         <div class="col-md-8">
-                            <input class="form-control" type="text"  id="emp_no" required>
+                            <select class="form-control select2" id="emp_no" required>
+                                <option value="">Select the Emp No</option>
+                                {% for empid in empids %}
+                                    <option value="{{empid.empid}}">{{empid.empid}}</option>
+                                {% endfor %}
+                            </select>
+
+<!--                            <input class="form-control" type="text"  id="emp_no" required>-->
                         </div>
                     </div>
                     <div class="mb-3 row">
                         <label for="material_code" class="col-md-4 col-form-label">Material Code:</label>
                         <div class="col-md-8">
-                            <input class="form-control" type="text"  id="material_code" required>
+                            <select class="form-control select2" id="material_code" required>
+                                <option value="">Select the Material Code</option>
+                                {% for material in materials %}
+                                    <option value="{{material.material_code}}" data-qty="{{material.stock_qty}}" >{{material.material_code}}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
                     
@@ -177,12 +190,11 @@
                         <label for="project_name" class="col-md-4 col-form-label">Project Name:</label>
 
                         <div class="col-md-8">
-                            <select class="form-control" id="project_name" required>
+                            <select class="form-control select2" id="project_name" required>
                                 <option value="">Select the Project Name</option>
                                 {% for project in projects %}
                                     <option value="{{project.proj_name}}">{{project.proj_name}}</option>
                                 {% endfor %}
-
                             </select>
                         </div>
                     </div>
@@ -190,7 +202,7 @@
                     <div class="mb-3 row">
                         <label for="material_out" class="col-md-4 col-form-label">Material Out:</label>
                         <div class="col-md-8">
-                            <input class="form-control" type="text"  id="material_out" required>
+                            <input class="form-control" type="number"  id="material_out" data-parsley-materialout="" required>
                         </div>
                     </div>
                     <div class="mb-3 row">
@@ -202,7 +214,7 @@
                     <div class="mb-3 row">
                         <label for="date_time" class="col-md-4 col-form-label">Date & Time:</label>
                         <div class="col-md-8">
-                            <input class="form-control" type="text"  id="date_time" required>
+                            <input class="form-control" type="text"  id="date_time" data-provide="datepicker" data-date-autoclose="true" required>
                         </div>
                     </div>
                     <input type="hidden" id="materiallogid" value="-1" />
@@ -265,6 +277,18 @@
         $("#datatable").DataTable();
         $("#text_error").hide();
     });
+    window.Parsley.addValidator('materialout', {
+          validateString: function(value) {
+
+            let qty = $("#material_code").find('option:selected').data('qty')
+            if(value<=0 || value>qty)
+                return false;
+            return true;
+          },
+          messages: {
+            en: 'Cannot be null / zero / more than available stock quantity.'
+          }
+        });
     $("#date_time").flatpickr({
         enableTime: true,
         dateFormat: "d M, Y H:i",
@@ -344,7 +368,21 @@
             });
         }
     });
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
     $("#materiallogadd").on('click', function(e){
+
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = monthNames[today.getMonth()];
+        var yyyy = today.getFullYear();
+        var hh=today.getHours();
+        var MM=today.getMinutes();
+        $("#date_time").val(dd + " " + mm + ", " + yyyy+" "+hh+":"+MM);
+<!--        $('#date_time').datepicker('setDate', dd + " " + mm + ", " + yyyy);-->
+
         $("#head_title").html('Add New Material Log');
         $(".btn_materiallogadd").html('Add');
         $("#materiallogid").val("-1");
@@ -353,7 +391,6 @@
         $("#material_code").val("");
         $("#material_out").val("");
         $("#comment").val("");
-        $('#date_time').val("");
         
         $("#materiallogmodal").modal('show');
     });
@@ -361,6 +398,7 @@
     $(".search_filter").select2({width: '100%'});
     $(".btn_materiallogadd").on('click', function(e){
         $("#MaterialLogForm").parsley().validate();
+
         if ($('#MaterialLogForm').parsley().validate() === false) {         
             event.preventDefault();
             event.stopPropagation();
@@ -407,8 +445,11 @@
             success: function (data) {
                 up_data = JSON.parse(data);
                 $("#project_name").val(up_data.project_name);
+                $('#project_name').trigger('change');
                 $("#emp_no").val(up_data.emp_no);
-                $("#material_code").val(up_data.material_code);   
+                $('#emp_no').trigger('change');
+                $("#material_code").val(up_data.material_code);
+                $('#material_code').trigger('change');
                 $("#material_out").val(up_data.material_out);
                 $('#comment').val(up_data.comment);
                 $("#date_time").val(up_data.date_time);  
