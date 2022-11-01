@@ -1838,9 +1838,11 @@ def exportQuotationPDF(request, value):
         temp_data.append(str(quotationitem.qty))
         temp_data.append(str(quotationitem.unitprice))
         temp_data.append(str(quotationitem.amount))
+        print("----------------", temp_data)
         data.append(temp_data)
         index += 1
     note = []
+
     note.append("")
     
     if quotation.note:
@@ -1884,8 +1886,8 @@ def exportQuotationPDF(request, value):
             style=[
                 ('BACKGROUND', (0, 0), (5, 0), colors.lavender),
                 ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('SPAN',(1,-5),(-1,-5)),
-                ('SPAN',(1,-4),(-1,-4)),
+                # ('SPAN',(1,-5),(-1,-5)),
+                # ('SPAN',(1,-4),(-1,-4)),
                 ('VALIGN',(1,-4),(-1,-4), "MIDDLE"),
             ],
         )
