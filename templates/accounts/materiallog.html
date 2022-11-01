@@ -180,7 +180,7 @@
                             <select class="form-control select2" id="material_code" required>
                                 <option value="">Select the Material Code</option>
                                 {% for material in materials %}
-                                    <option value="{{material.material_code}}" data-qty="{{material.stock_qty}}" >{{material.product_desc}} - {{material.material_code}}</option>
+                                    <option value="{{material.material_code}}" data-qty="{{material.stock_qty}}" > {{material.material_code}} {{material.product_desc}}</option>
                                 {% endfor %}
                             </select>
                         </div>
