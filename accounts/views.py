@@ -809,6 +809,10 @@ def materiallogadd(request):
                     comment=comment,
                     date_time=date_time
                 )
+
+                materialInventory = Material.objects.get(material_code=material_code)
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
                 return JsonResponse({
                     "status": "Success",
                     "messages": "Materiallog information added!"
@@ -828,7 +832,9 @@ def materiallogadd(request):
                 materiallog.comment = comment
                 materiallog.date_time = date_time
                 materiallog.save()
-
+                materialInventory = Material.objects.get(material_code=material_code)
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
                 return JsonResponse({
                     "status": "Success",
                     "messages": "MaterialLog information updated!"
@@ -846,8 +852,13 @@ def materiallogdelete(request):
     if request.method == "POST":
         materiallogid = request.POST.get('materiallogid')
         materiallog = MaterialLog.objects.get(id=materiallogid)
+        material_code=materiallog.material_code
+        material_out=materiallog.material_out
         materiallog.delete()
 
+        materialInventory = Material.objects.get(material_code=material_code)
+        materialInventory.stock_qty += int(material_out)
+        materialInventory.save()
         return JsonResponse({'status': 'ok'})
 
 
