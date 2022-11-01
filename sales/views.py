@@ -1838,7 +1838,6 @@ def exportQuotationPDF(request, value):
         temp_data.append(str(quotationitem.qty))
         temp_data.append(str(quotationitem.unitprice))
         temp_data.append(str(quotationitem.amount))
-        print("----------------", temp_data)
         data.append(temp_data)
         index += 1
     note = []
