@@ -125,6 +125,21 @@ class PPELog(models.Model):
     class Meta:
         db_table = "tb_ppeout"
 
+class StationaryLog(models.Model):
+    emp_no = models.CharField(max_length=250, blank=True, null=True)
+    stationary_code = models.CharField(max_length=250, blank=True, null=True)
+    stationary_desc = models.CharField(max_length=250, blank=True, null=True)
+    project_name = models.CharField(max_length=250, blank=True, null=True)
+    stationary_out = models.CharField(max_length=250, blank=True, null=True)
+    date_time = models.DateTimeField(blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.stationary_code
+
+    class Meta:
+        db_table = "tb_stationaryout"
+
 
 class AssetLog(models.Model):
     emp_no = models.CharField(max_length=250, blank=True, null=True)

@@ -1,12 +1,12 @@
 import os
 from accounts.resources import WorkLogResource
-from inventory.models import Material
+from inventory.models import Material, PPE, Stationary
 from project.models import Project
 import sales
 from django.contrib.auth import login, logout
 from accounts import models
 from accounts.models import NotificationPrivilege, User, Role, WorkLog, MaterialLog, AssetLog, Holiday, OTCalculation, \
-    Privilege, UserCert, UserAddress, UserItemIssued, UserItemTool, Uom
+    Privilege, UserCert, UserAddress, UserItemIssued, UserItemTool, Uom, PPELog, StationaryLog
 from django.urls import reverse_lazy
 from django.contrib.auth.forms import AuthenticationForm
 from django.views.generic import FormView, RedirectView
@@ -827,6 +827,8 @@ def materiallogadd(request):
         else:
             try:
                 materiallog = MaterialLog.objects.get(id=materiallogid)
+                materialInventory = Material.objects.get(material_code=material_code)
+                materialInventory.stock_qty+=int(materiallog.material_out)
                 materiallog.project_name = project_name
                 materiallog.emp_no = emp_no
                 materiallog.material_code = material_code
@@ -835,7 +837,6 @@ def materiallogadd(request):
                 materiallog.comment = comment
                 materiallog.date_time = date_time
                 materiallog.save()
-                materialInventory = Material.objects.get(material_code=material_code)
                 materialInventory.stock_qty-=int(material_out)
                 materialInventory.save()
                 return JsonResponse({
@@ -875,6 +876,314 @@ def getMateriallog(request):
             'material_code': materiallog.material_code,
             'project_name': materiallog.project_name,
             'material_out': materiallog.material_out,
+            'comment': materiallog.comment,
+            'date_time': materiallog.date_time.strftime('%d %b, %Y %H:%M')
+
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+
+@method_decorator(login_required, name='dispatch')
+class PPElogList(ListView):
+    model = PPELog
+    template_name = "accounts/ppelog.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['empids'] = User.objects.filter(
+            Q(role__icontains='Supervisors') | Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin'))\
+            .order_by('empid').values('empid').distinct()
+        context['emp_nos'] = PPELog.objects.exclude(emp_no=None).order_by('emp_no').values('emp_no').distinct()
+        context['ppecodes'] = PPELog.objects.exclude(ppe_code=None).order_by('ppe_code').values(
+            'ppe_code').distinct()
+        context['ppes'] = PPE.objects.exclude(ppe_code=None).order_by('ppe_code').distinct()
+        context['projectnames'] = PPELog.objects.exclude(project_name=None).order_by('project_name').values(
+            'project_name').distinct()
+        context['projects'] = Project.objects.filter(proj_status="On-going").order_by('proj_name').values(
+            'proj_name').distinct()
+        return context
+
+
+@ajax_login_required
+def ajax_ppelog(request):
+    if request.method == "POST":
+        ppelogs = PPELog.objects.all()
+
+        return render(request, 'accounts/ajax-ppe-log.html', {'ppelogs': ppelogs})
+
+
+@ajax_login_required
+def ajax_ppelog_filter(request):
+    if request.method == "POST":
+        search_empno = request.POST.get('search_empno')
+        search_name = request.POST.get('search_name')
+        search_code = request.POST.get('search_code')
+        if search_empno != "" and search_name == "" and search_code == "":
+            materiallogs = PPELog.objects.filter(emp_no__iexact=search_empno)
+
+        elif search_empno != "" and search_name != "" and search_code == "":
+            materiallogs = PPELog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name)
+
+        elif search_empno != "" and search_name != "" and search_code != "":
+            materiallogs = PPELog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name,
+                                                      ppe_code__iexact=search_code)
+
+        elif search_empno == "" and search_name != "" and search_code == "":
+            materiallogs = PPELog.objects.filter(project_name__iexact=search_name)
+
+        elif search_empno == "" and search_name != "" and search_code != "":
+            materiallogs = PPELog.objects.filter(ppe_code__iexact=search_code,
+                                                      project_name__iexact=search_name)
+
+        elif search_empno == "" and search_name == "" and search_code != "":
+            materiallogs = PPELog.objects.filter(ppe_code__iexact=search_code)
+
+        elif search_empno != "" and search_name == "" and search_code != "":
+            materiallogs = PPELog.objects.filter(emp_no__iexact=search_empno, ppe_code__iexact=search_code)
+
+        return render(request, 'accounts/ajax-ppe-log.html', {'ppelogs': materiallogs})
+
+
+@ajax_login_required
+def ppelogadd(request):
+    if request.method == "POST":
+        project_name = request.POST.get('project_name')
+        emp_no = request.POST.get('emp_no')
+        material_code = request.POST.get('material_code')
+        product_desc = request.POST.get('product_desc')
+        material_out = request.POST.get('material_out')
+        comment = request.POST.get('comment')
+        date_time = request.POST.get('date_time')
+        materiallogid = request.POST.get('materiallogid')
+        if materiallogid == "-1":
+            try:
+                PPELog.objects.create(
+                    project_name=project_name,
+                    emp_no=emp_no,
+                    ppe_code=material_code,
+                    ppe_desc=product_desc,
+                    ppe_out=material_out,
+                    comment=comment,
+                    date_time=date_time
+                )
+
+                materialInventory = PPE.objects.get(ppe_code=material_code)
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "Materiallog information added!"
+                })
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+        else:
+            try:
+                materiallog = PPELog.objects.get(id=materiallogid)
+                materialInventory = PPE.objects.get(ppe_code=material_code)
+                materialInventory.stock_qty +=int(materiallog.ppe_out)
+                materiallog.project_name = project_name
+                materiallog.emp_no = emp_no
+                materiallog.ppe_code = material_code
+                materiallog.ppe_desc = product_desc
+                materiallog.ppe_out = material_out
+                materiallog.comment = comment
+                materiallog.date_time = date_time
+                materiallog.save()
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "MaterialLog information updated!"
+                })
+
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+
+
+@ajax_login_required
+def ppelogdelete(request):
+    if request.method == "POST":
+        materiallogid = request.POST.get('materiallogid')
+        materiallog = PPELog.objects.get(id=materiallogid)
+        material_code=materiallog.ppe_code
+        material_out=materiallog.ppe_out
+        materiallog.delete()
+
+        materialInventory = PPE.objects.get(ppe_code=material_code)
+        materialInventory.stock_qty += int(material_out)
+        materialInventory.save()
+        return JsonResponse({'status': 'ok'})
+
+
+@ajax_login_required
+def getPPElog(request):
+    if request.method == "POST":
+        materiallogid = request.POST.get('materiallogid')
+        materiallog = PPELog.objects.get(id=materiallogid)
+        data = {
+            'emp_no': materiallog.emp_no,
+            'material_code': materiallog.ppe_code,
+            'project_name': materiallog.project_name,
+            'material_out': materiallog.ppe_out,
+            'comment': materiallog.comment,
+            'date_time': materiallog.date_time.strftime('%d %b, %Y %H:%M')
+
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+
+@method_decorator(login_required, name='dispatch')
+class StrationarylogList(ListView):
+    model = PPELog
+    template_name = "accounts/stationarylog.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['empids'] = User.objects.filter(
+            Q(role__icontains='Supervisors') | Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin'))\
+            .order_by('empid').values('empid').distinct()
+        context['emp_nos'] = StationaryLog.objects.exclude(emp_no=None).order_by('emp_no').values('emp_no').distinct()
+        context['stationarycodes'] = StationaryLog.objects.exclude(stationary_code=None).order_by('stationary_code').values(
+            'stationary_code').distinct()
+        context['stationaries'] = Stationary.objects.exclude(stationary_code=None).order_by('stationary_code').distinct()
+        context['projectnames'] = StationaryLog.objects.exclude(project_name=None).order_by('project_name').values(
+            'project_name').distinct()
+        context['projects'] = Project.objects.filter(proj_status="On-going").order_by('proj_name').values(
+            'proj_name').distinct()
+        return context
+
+
+@ajax_login_required
+def ajax_stationarylog(request):
+    if request.method == "POST":
+        stationarylogs = StationaryLog.objects.all()
+        return render(request, 'accounts/ajax-stationary-log.html', {'stationarylogs': stationarylogs})
+
+
+@ajax_login_required
+def ajax_stationarylog_filter(request):
+    if request.method == "POST":
+        search_empno = request.POST.get('search_empno')
+        search_name = request.POST.get('search_name')
+        search_code = request.POST.get('search_code')
+        if search_empno != "" and search_name == "" and search_code == "":
+            materiallogs = StationaryLog.objects.filter(emp_no__iexact=search_empno)
+
+        elif search_empno != "" and search_name != "" and search_code == "":
+            materiallogs = StationaryLog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name)
+
+        elif search_empno != "" and search_name != "" and search_code != "":
+            materiallogs = StationaryLog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name,
+                                                      stationary_code__iexact=search_code)
+
+        elif search_empno == "" and search_name != "" and search_code == "":
+            materiallogs = StationaryLog.objects.filter(project_name__iexact=search_name)
+
+        elif search_empno == "" and search_name != "" and search_code != "":
+            materiallogs = StationaryLog.objects.filter(stationary_code__iexact=search_code,
+                                                      project_name__iexact=search_name)
+
+        elif search_empno == "" and search_name == "" and search_code != "":
+            materiallogs = StationaryLog.objects.filter(stationary_code__iexact=search_code)
+
+        elif search_empno != "" and search_name == "" and search_code != "":
+            materiallogs = StationaryLog.objects.filter(emp_no__iexact=search_empno, stationary_code__iexact=search_code)
+
+        return render(request, 'accounts/ajax-ppe-log.html', {'stationarylogs': materiallogs})
+
+
+@ajax_login_required
+def stationarylogadd(request):
+    if request.method == "POST":
+        project_name = request.POST.get('project_name')
+        emp_no = request.POST.get('emp_no')
+        material_code = request.POST.get('material_code')
+        product_desc = request.POST.get('product_desc')
+        material_out = request.POST.get('material_out')
+        comment = request.POST.get('comment')
+        date_time = request.POST.get('date_time')
+        materiallogid = request.POST.get('materiallogid')
+        if materiallogid == "-1":
+            try:
+                StationaryLog.objects.create(
+                    project_name=project_name,
+                    emp_no=emp_no,
+                    stationary_code=material_code,
+                    stationary_desc=product_desc,
+                    stationary_out=material_out,
+                    comment=comment,
+                    date_time=date_time
+                )
+
+                materialInventory = Stationary.objects.get(stationary_code=material_code)
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "Materiallog information added!"
+                })
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+        else:
+            try:
+                materiallog = StationaryLog.objects.get(id=materiallogid)
+                materialInventory = Stationary.objects.get(stationary_code=material_code)
+                materialInventory.stock_qty +=int(materiallog.stationary_out)
+                materiallog.project_name = project_name
+                materiallog.emp_no = emp_no
+                materiallog.stationary_code = material_code
+                materiallog.stationary_desc = product_desc
+                materiallog.stationary_out = material_out
+                materiallog.comment = comment
+                materiallog.date_time = date_time
+                materiallog.save()
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "MaterialLog information updated!"
+                })
+
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+
+
+@ajax_login_required
+def stationarylogdelete(request):
+    if request.method == "POST":
+        materiallogid = request.POST.get('materiallogid')
+        materiallog = StationaryLog.objects.get(id=materiallogid)
+        material_code=materiallog.stationary_code
+        material_out=materiallog.stationary_out
+        materiallog.delete()
+
+        materialInventory = Stationary.objects.get(stationary_code=material_code)
+        materialInventory.stock_qty += int(material_out)
+        materialInventory.save()
+        return JsonResponse({'status': 'ok'})
+
+
+@ajax_login_required
+def getStationarylog(request):
+    if request.method == "POST":
+        materiallogid = request.POST.get('materiallogid')
+        print("-----", materiallogid)
+        materiallog = StationaryLog.objects.get(id=materiallogid)
+        data = {
+            'emp_no': materiallog.emp_no,
+            'material_code': materiallog.stationary_code,
+            'project_name': materiallog.project_name,
+            'material_out': materiallog.stationary_out,
             'comment': materiallog.comment,
             'date_time': materiallog.date_time.strftime('%d %b, %Y %H:%M')
 

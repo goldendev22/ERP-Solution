@@ -56,6 +56,20 @@ urlpatterns = [
     url(r'^ajax_add_materiallog/$', views.materiallogadd, name='ajax_add_materiallog'),
     url(r'^ajax_delete_materiallog/$', views.materiallogdelete, name='ajax_delete_materiallog'),
     url(r'^ajax_get_materiallog/$', views.getMateriallog, name='ajax_get_materiallog'),
+    #ppe log part
+    url(r'^ppe-logs/$', views.PPElogList.as_view(), name='all_ppelog'),
+    url(r'^ajax_all_ppelog/$', views.ajax_ppelog, name='ajax_all_ppelog'),
+    url(r'^ajax_filter_ppelog/$', views.ajax_ppelog_filter, name='ajax_filter_ppelog'),
+    url(r'^ajax_add_ppelog/$', views.ppelogadd, name='ajax_add_ppelog'),
+    url(r'^ajax_delete_ppelog/$', views.ppelogdelete, name='ajax_delete_ppelog'),
+    url(r'^ajax_get_ppelog/$', views.getPPElog, name='ajax_get_ppelog'),
+    #stationary log part
+    url(r'^stationary-logs/$', views.StrationarylogList.as_view(), name='all_stationarylog'),
+    url(r'^ajax_all_stationarylog/$', views.ajax_stationarylog, name='ajax_all_stationarylog'),
+    url(r'^ajax_filter_stationarylog/$', views.ajax_stationarylog_filter, name='ajax_filter_stationarylog'),
+    url(r'^ajax_add_stationarylog/$', views.stationarylogadd, name='ajax_add_stationarylog'),
+    url(r'^ajax_delete_stationarylog/$', views.stationarylogdelete, name='ajax_delete_stationarylog'),
+    url(r'^ajax_get_stationarylog/$', views.getStationarylog, name='ajax_get_stationarylog'),
 
     #assets log part
     url(r'^asset-logs/$', views.AssetLogList.as_view(), name='all_assetlog'),
