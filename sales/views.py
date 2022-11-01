@@ -731,6 +731,21 @@ def readnotify(request):
         return JsonResponse({'status': 'ok'})
 
 @ajax_login_required
+def unreadnotify(request):
+    if request.method == "POST":
+        notifyid = request.POST.get('notifyid')
+        request.user.notifications.get(id=notifyid).mark_as_unread()
+
+        return JsonResponse({'status': 'ok'})
+@ajax_login_required
+def removenotify(request):
+    if request.method == "POST":
+        notifyid = request.POST.get('notifyid')
+        notification=request.user.notifications.get(id=notifyid)
+        notification.delete()
+        return JsonResponse({'status': 'ok'})
+
+@ajax_login_required
 def markUserNotificationsRead(request):
     if request.method == 'POST':
         user_id = request.POST['user_id']
