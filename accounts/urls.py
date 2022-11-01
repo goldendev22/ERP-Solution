@@ -56,6 +56,20 @@ urlpatterns = [
     url(r'^ajax_add_materiallog/$', views.materiallogadd, name='ajax_add_materiallog'),
     url(r'^ajax_delete_materiallog/$', views.materiallogdelete, name='ajax_delete_materiallog'),
     url(r'^ajax_get_materiallog/$', views.getMateriallog, name='ajax_get_materiallog'),
+    #ppe log part
+    url(r'^ppe-logs/$', views.PPElogList.as_view(), name='all_ppelog'),
+    url(r'^ajax_all_ppelog/$', views.ajax_ppelog, name='ajax_all_ppelog'),
+    url(r'^ajax_filter_ppelog/$', views.ajax_ppelog_filter, name='ajax_filter_ppelog'),
+    url(r'^ajax_add_ppelog/$', views.ppelogadd, name='ajax_add_ppelog'),
+    url(r'^ajax_delete_ppelog/$', views.ppelogdelete, name='ajax_delete_ppelog'),
+    url(r'^ajax_get_ppelog/$', views.getPPElog, name='ajax_get_ppelog'),
+    #stationary log part
+    url(r'^stationary-logs/$', views.StrationarylogList.as_view(), name='all_stationarylog'),
+    url(r'^ajax_all_stationarylog/$', views.ajax_stationarylog, name='ajax_all_stationarylog'),
+    url(r'^ajax_filter_stationarylog/$', views.ajax_stationarylog_filter, name='ajax_filter_stationarylog'),
+    url(r'^ajax_add_stationarylog/$', views.stationarylogadd, name='ajax_add_stationarylog'),
+    url(r'^ajax_delete_stationarylog/$', views.stationarylogdelete, name='ajax_delete_stationarylog'),
+    url(r'^ajax_get_stationarylog/$', views.getStationarylog, name='ajax_get_stationarylog'),
 
     #assets log part
     url(r'^asset-logs/$', views.AssetLogList.as_view(), name='all_assetlog'),
@@ -78,4 +92,10 @@ urlpatterns = [
     url(r'^ot-calculation-filter-summary/(?P<checkin_time>[^/]+)/(?P<checkout_time>[^/]+)/$', views.OtcalculationFilterSummary.as_view(), name='ot_calculation_filter_summary'),
     url(r'^ajax_summary_filter_otcalculate/$', views.ajax_otcalculation_filter_summary, name='ajax_summary_filter_otcalculate'),
 
+    url(r'^ajax_delete_cert/$', views.certdelete, name='ajax_delete_cert'),
+    url(r'^ajax_get_cert/$', views.getCert, name='ajax_get_cert'),
+    url(r'^ajax_delete_issued/$', views.issueddelete, name='ajax_delete_issued'),
+    url(r'^ajax_get_issued_item/$', views.getIssuedItem, name='ajax_get_issued_item'),
+    url(r'^ajax_delete_toolItem/$', views.toolItemdelete, name='ajax_delete_toolItem'),
+    url(r'^ajax_get_tool_item/$', views.getToolItem, name='ajax_get_tool_item'),
 ]

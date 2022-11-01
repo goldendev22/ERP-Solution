@@ -79,6 +79,7 @@ def expensesclaimadd(request):
         claim_no = request.POST.get('claim_no')
         submission_date = request.POST.get('submission_date')
         emp_id = request.POST.get('emp_id')
+        status=request.POST.get('exp_status')
         #total = request.POST.get('total')
         expense_name = request.POST.get("expense_name")
         
@@ -88,6 +89,7 @@ def expensesclaimadd(request):
                 expenseclaim = ExpensesClaim.objects.create(
                     submission_date=submission_date,
                     emp_id=emp_id,
+                    status="Open",
                     #total=total,
                     ec_id=claim_no,
                     expenses_name=expense_name
@@ -113,7 +115,9 @@ def expensesclaimadd(request):
                 expenses = ExpensesClaim.objects.get(id=expensesid)
                 expenses.submission_date = submission_date
                 expenses.emp_id = emp_id
+                expenses.status=status
                 #expenses.total = total
+
                 expenses.ec_id = claim_no
                 expenses.expenses_name= expense_name
                 expenses.save()

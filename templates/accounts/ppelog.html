@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block page-title %}Material Log{% endblock%}
+{% block page-title %}PPE Log{% endblock%}
 {% block css %}
     <link href="{% static 'assets/libs/select2/css/select2.min.css' %}" rel="stylesheet" type="text/css" />
-<link href="{% static 'assets/libs/bootstrap-datepicker/css/bootstrap-datepicker.min.css' %}" rel="stylesheet">
+    <link href="{% static 'assets/libs/bootstrap-datepicker/css/bootstrap-datepicker.min.css' %}" rel="stylesheet">
     <!-- DataTables -->
     <link href="{% static 'assets/libs/datatables.net-bs4/css/dataTables.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" />
     <link href="{% static 'assets/libs/datatables.net-buttons-bs4/css/buttons.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" />
     <!-- Responsive datatable examples -->
-    <link href="{% static 'assets/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" /> 
+    <link href="{% static 'assets/libs/datatables.net-responsive-bs4/css/responsive.bootstrap4.min.css' %}" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="{% static 'assets/css/flatpicker.css' %}">
 
 
@@ -75,17 +75,17 @@
     <div class="row">
         <div class="col-sm-6">
             <div class="page-title-box">
-                <h4>Material Log
+                <h4>PPE Log
                 </h4>
                     <ol class="breadcrumb m-0">
-                        <li class="breadcrumb-item"><a class="text-primary" href="{% url 'all_materiallog' %}"><b>Material Log</b></a></li>
-                        <li class="breadcrumb-item active">All Material Log</li>
+                        <li class="breadcrumb-item"><a class="text-primary" href="{% url 'all_ppelog' %}"><b>PPE Log</b></a></li>
+                        <li class="breadcrumb-item active">All PPE Log</li>
                     </ol>
-                    
+
             </div>
         </div>
     </div>
-    
+
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -110,27 +110,27 @@
                                             <option value="{{emp_no.emp_no}}">{{emp_no.emp_no}}</option>
                                         {% endfor %}
                                     </select>
-                                    
+
                                 </div>
                                 <div class="mt-1 col-md-2 space-custom">
                                     <select class="form-control search_filter" id="search_name" required>
                                         <option value="">Project Name</option>
-                                        {% for materialname in materialnames %}
-                                            <option value="{{materialname.project_name}}">{{materialname.project_name}}</option>
+                                        {% for projectname in projectnames %}
+                                            <option value="{{projectname.project_name}}">{{projectname.project_name}}</option>
                                         {% endfor %}
                                     </select>
-                                    
+
                                 </div>
                                 <div class="mt-1 col-md-2 space-custom">
                                     <select class="form-control search_filter" id="search_code" required>
-                                        <option value="">Material Code</option>
-                                        {% for materialcode in materialcodes %}
-                                            <option value="{{materialcode.material_code}}">{{materialcode.material_code}}</option>
+                                        <option value="">PPE Code</option>
+                                        {% for ppecode in ppecodes %}
+                                            <option value="{{ppecode.ppe_code}}">{{ppecode.ppe_code}}</option>
                                         {% endfor %}
                                     </select>
-                                    
+
                                 </div>
-                                
+
                                 <div class="col-md-1 space-custom justify-content-start">
                                     <a href="javascript:void(0);" id="materiallogsearch" class="btn btn-primary m-1"><i class="dripicons-search align-middle"></i></a>
                                 </div>
@@ -139,7 +139,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                     </div>
                     <div id="materiallog_data"></div>
                 </div>
@@ -152,7 +152,7 @@
     <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="head_title">Add New Material Log</h5>
+                <h5 class="modal-title" id="head_title">Add New PPE Log</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
             </div>
             <div class="modal-body" id="manage_info">
@@ -175,20 +175,19 @@
                         </div>
                     </div>
                     <div class="mb-3 row">
-                        <label for="material_code" class="col-md-4 col-form-label">Material Code:</label>
+                        <label for="material_code" class="col-md-4 col-form-label">PPE Code:</label>
                         <div class="col-md-8">
                             <select class="form-control select2" id="material_code" required>
-                                <option value="">Select the Material Code</option>
-                                {% for material in materials %}
-                                    <option value="{{material.material_code}}" data-qty="{{material.stock_qty}}" data-desc="{{material.product_desc}}" > {{material.material_code}} {{material.product_desc}}</option>
+                                <option value="">Select the PPE Code</option>
+                                {% for ppe in ppes %}
+                                    <option value="{{ppe.ppe_code}}" data-qty="{{ppe.stock_qty}}" data-desc="{{ppe.ppe_desc}}" > {{ppe.ppe_code}} {{ppe.ppe_desc}}</option>
                                 {% endfor %}
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3 mt-3 row">
                         <label for="project_name" class="col-md-4 col-form-label">Project Name:</label>
-
                         <div class="col-md-8">
                             <select class="form-control select2" id="project_name" required>
                                 <option value="">Select the Project Name</option>
@@ -198,9 +197,9 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="mb-3 row">
-                        <label for="material_out" class="col-md-4 col-form-label">Material Out:</label>
+                        <label for="material_out" class="col-md-4 col-form-label">PPE Out:</label>
                         <div class="col-md-8">
                             <input class="form-control" type="number"  id="material_out" data-parsley-materialout="" required>
                         </div>
@@ -219,12 +218,12 @@
                     </div>
                     <input type="hidden" id="materiallogid" value="-1" />
                 </form>
-            
+
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary waves-effect btn-sm" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary waves-effect waves-light btn-sm btn_materiallogadd">Add</button>
-                
+
             </div>
         </div>
         <!-- /.modal-content -->
@@ -236,7 +235,7 @@
     <div class="modal-dialog modal-md">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="delModalLabel">Delete Material Log</h5>
+                <h5 class="modal-title" id="delModalLabel">Delete PPE Log</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
             </div>
             <div class="modal-body">
@@ -312,7 +311,7 @@
         if (month.length < 2) {
             month = '0' + month;
         }
-           
+
         if (day.length < 2) {
             day = '0' + day;
         }
@@ -321,14 +320,14 @@
 
         return year + "-" + month + "-" + day + " " + hour + ":" +  min
     }
-    ajax_all_materiallog();
-    
-    function ajax_all_materiallog() {
+    ajax_all_ppelog();
+
+    function ajax_all_ppelog() {
         $.ajax({
 			headers: { "X-CSRFToken": '{{csrf_token}}' },
-			url: '{% url "ajax_all_materiallog" %}',
+			url: '{% url "ajax_all_ppelog" %}',
 			data: {
-				
+
 			},
 			type: 'POST',
 			success: function (data) {
@@ -343,14 +342,14 @@
     $("#del_confirm").on('click', function(event){
         $.ajax({
             headers: { "X-CSRFToken": '{{csrf_token}}' },
-            url: '{% url "ajax_delete_materiallog" %}',
+            url: '{% url "ajax_delete_ppelog" %}',
             data: {
                 'materiallogid': $("#del_id").val(),
             },
             type: 'POST',
             success: function (data) {
                 if (data.status == "ok") {
-                    location.reload(); 
+                    location.reload();
                 }
             }
         });
@@ -364,7 +363,7 @@
             $("#newSearchPlace").html('');
             $.ajax({
                 headers: { "X-CSRFToken": '{{csrf_token}}' },
-                url: '{% url "ajax_filter_materiallog" %}',
+                url: '{% url "ajax_filter_ppelog" %}',
                 data: {
                     search_empno: $("#search_empno").val(),
                     search_code: $("#search_code").val(),
@@ -392,7 +391,7 @@
         $("#date_time").val(dd + " " + mm + ", " + yyyy+" "+hh+":"+MM);
 <!--        $('#date_time').datepicker('setDate', dd + " " + mm + ", " + yyyy);-->
 
-        $("#head_title").html('Add New Material Log');
+        $("#head_title").html('Add New PPE Log');
         $(".btn_materiallogadd").html('Add');
         $("#materiallogid").val("-1");
         $("#project_name").val("");
@@ -403,7 +402,7 @@
         $('#material_code').trigger('change');
         $("#material_out").val("");
         $("#comment").val("");
-        
+
         $("#materiallogmodal").modal('show');
     });
     $(".select2").select2({width: '100%', dropdownParent: $("#manage_info")});
@@ -411,14 +410,14 @@
     $(".btn_materiallogadd").on('click', function(e){
         $("#MaterialLogForm").parsley().validate();
 
-        if ($('#MaterialLogForm').parsley().validate() === false) {         
+        if ($('#MaterialLogForm').parsley().validate() === false) {
             event.preventDefault();
             event.stopPropagation();
             return;
         } else {
             $.ajax({
                 headers: { "X-CSRFToken": '{{csrf_token}}' },
-                url: '{% url "ajax_add_materiallog" %}',
+                url: '{% url "ajax_add_ppelog" %}',
                 data: {
                     project_name: $("#project_name").val(),
                     emp_no: $("#emp_no").val(),
@@ -427,7 +426,6 @@
                     material_out: $("#material_out").val(),
                     comment: $("#comment").val(),
                     date_time: formatDateTime($("#date_time").val()),
-                    
                     materiallogid: $("#materiallogid").val()
 
                 },
@@ -446,11 +444,11 @@
     });
     function updatemateriallog(id) {
         $("#materiallogid").val(id);
-        $("#head_title").html('Update Material Log');
+        $("#head_title").html('Update PPE Log');
         $(".btn_materiallogadd").html('Update');
         $.ajax({
             headers: { "X-CSRFToken": '{{csrf_token}}' },
-            url: '{% url "ajax_get_materiallog" %}',
+            url: '{% url "ajax_get_ppelog" %}',
             data: {
                 materiallogid: $("#materiallogid").val()
             },
@@ -466,7 +464,7 @@
                 $("#material_out").val(up_data.material_out);
                 $('#material_out').trigger('change');
                 $('#comment').val(up_data.comment);
-                $("#date_time").val(up_data.date_time);  
+                $("#date_time").val(up_data.date_time);
             }
         });
         $("#materiallogmodal").modal('show');
@@ -478,9 +476,9 @@
             day = '' + d.getDate(),
             year = d.getFullYear();
 
-        if (month.length < 2) 
+        if (month.length < 2)
             month = '0' + month;
-        if (day.length < 2) 
+        if (day.length < 2)
             day = '0' + day;
 
         return [year, month, day].join('-');

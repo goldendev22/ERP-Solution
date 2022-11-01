@@ -104,7 +104,6 @@
                     </ul>
                     <div class="tab-content">
                         <div class="tab-pane p-3" id="overview" role="tabpanel">
-                            
                             <div id="progresslog_data"></div>
                         </div>
                         <div class="tab-pane p-3" id="progress_log" role="tabpanel">
@@ -180,7 +179,7 @@
                     <div class="mb-3 row">
                         <label for="progressuom" class="col-md-4 col-form-label">UOM:</label>
                         <div class="col-md-8">
-                            <select class="form-control uom-select" id="progressuom" name="progressuom" >
+                            <select class="form-control uom-select" id="progressuom" name="progressuom" disabled="true">
                                 <option value="">Select UOM</option>
                                 {% for uom in uoms %}
                                     <option value="{{uom.id}}">{{uom.name}}</option>

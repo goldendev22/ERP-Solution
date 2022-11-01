@@ -1,11 +1,12 @@
 import os
 from accounts.resources import WorkLogResource
+from inventory.models import Material, PPE, Stationary
 from project.models import Project
 import sales
 from django.contrib.auth import login, logout
 from accounts import models
 from accounts.models import NotificationPrivilege, User, Role, WorkLog, MaterialLog, AssetLog, Holiday, OTCalculation, \
-    Privilege, UserCert, UserAddress, UserItemIssued, UserItemTool
+    Privilege, UserCert, UserAddress, UserItemIssued, UserItemTool, Uom, PPELog, StationaryLog
 from django.urls import reverse_lazy
 from django.contrib.auth.forms import AuthenticationForm
 from django.views.generic import FormView, RedirectView
@@ -261,7 +262,8 @@ def newUser(request):
                         username=firstname + lastname
                     )
                     Privilege.objects.create(
-                        user_id=user.id,
+                        # user_id=user.id,
+                        user=user,
                         sales_summary="Only View",
                         sales_report="Only View",
                         proj_summary="Only View",
@@ -270,7 +272,7 @@ def newUser(request):
                         invent_material="Only View"
                     )
                     NotificationPrivilege.objects.create(
-                        user_id=user.id,
+                        user=user,
                         project_no_created=True,
                         project_status=True,
                         project_end=2,
@@ -348,6 +350,7 @@ class UserDetailView(DetailView):
         current_user = User.objects.get(id=content_pk)
         context['countrys'] = Country.objects.all()
         context['roles'] = Role.objects.all()
+        context['uoms'] = Uom.objects.all()
         context['certificates'] = UserCert.objects.filter(emp_id__iexact=current_user.username)
         context['issuedtools'] = UserItemTool.objects.filter(emp_id__iexact=current_user.username)
         context['selected_user'] = content_pk
@@ -359,7 +362,9 @@ class UserDetailView(DetailView):
 
         context['issueditems'] = UserItemIssued.objects.filter(empid__iexact=current_user.empid)
         context['issueusers'] = User.objects.filter(
-            Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(is_staff=True))
+            Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin'))
+        # context['issueusers'] = User.objects.filter(
+        #     Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin') | Q(is_staff=True))
         return context
 
 
@@ -730,11 +735,17 @@ class MateriallogList(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['empids'] = User.objects.filter(
+            Q(role__icontains='Supervisors') | Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin'))\
+            .order_by('empid').values('empid').distinct()
         context['emp_nos'] = MaterialLog.objects.exclude(emp_no=None).order_by('emp_no').values('emp_no').distinct()
         context['materialcodes'] = MaterialLog.objects.exclude(material_code=None).order_by('material_code').values(
             'material_code').distinct()
+        context['materials'] = Material.objects.exclude(material_code=None).order_by('material_code').distinct()
         context['materialnames'] = MaterialLog.objects.exclude(project_name=None).order_by('project_name').values(
             'project_name').distinct()
+        context['projects'] = Project.objects.filter(proj_status="On-going").order_by('proj_name').values(
+            'proj_name').distinct()
         return context
 
 
@@ -784,6 +795,7 @@ def materiallogadd(request):
         project_name = request.POST.get('project_name')
         emp_no = request.POST.get('emp_no')
         material_code = request.POST.get('material_code')
+        product_desc = request.POST.get('product_desc')
         material_out = request.POST.get('material_out')
         comment = request.POST.get('comment')
         date_time = request.POST.get('date_time')
@@ -794,10 +806,15 @@ def materiallogadd(request):
                     project_name=project_name,
                     emp_no=emp_no,
                     material_code=material_code,
+                    product_desc=product_desc,
                     material_out=material_out,
                     comment=comment,
                     date_time=date_time
                 )
+
+                materialInventory = Material.objects.get(material_code=material_code)
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
                 return JsonResponse({
                     "status": "Success",
                     "messages": "Materiallog information added!"
@@ -810,14 +827,18 @@ def materiallogadd(request):
         else:
             try:
                 materiallog = MaterialLog.objects.get(id=materiallogid)
+                materialInventory = Material.objects.get(material_code=material_code)
+                materialInventory.stock_qty+=int(materiallog.material_out)
                 materiallog.project_name = project_name
                 materiallog.emp_no = emp_no
                 materiallog.material_code = material_code
+                materiallog.product_desc = product_desc
                 materiallog.material_out = material_out
                 materiallog.comment = comment
                 materiallog.date_time = date_time
                 materiallog.save()
-
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
                 return JsonResponse({
                     "status": "Success",
                     "messages": "MaterialLog information updated!"
@@ -835,8 +856,13 @@ def materiallogdelete(request):
     if request.method == "POST":
         materiallogid = request.POST.get('materiallogid')
         materiallog = MaterialLog.objects.get(id=materiallogid)
+        material_code=materiallog.material_code
+        material_out=materiallog.material_out
         materiallog.delete()
 
+        materialInventory = Material.objects.get(material_code=material_code)
+        materialInventory.stock_qty += int(material_out)
+        materialInventory.save()
         return JsonResponse({'status': 'ok'})
 
 
@@ -849,7 +875,315 @@ def getMateriallog(request):
             'emp_no': materiallog.emp_no,
             'material_code': materiallog.material_code,
             'project_name': materiallog.project_name,
-            'comment': materiallog.material_out,
+            'material_out': materiallog.material_out,
+            'comment': materiallog.comment,
+            'date_time': materiallog.date_time.strftime('%d %b, %Y %H:%M')
+
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+
+@method_decorator(login_required, name='dispatch')
+class PPElogList(ListView):
+    model = PPELog
+    template_name = "accounts/ppelog.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['empids'] = User.objects.filter(
+            Q(role__icontains='Supervisors') | Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin'))\
+            .order_by('empid').values('empid').distinct()
+        context['emp_nos'] = PPELog.objects.exclude(emp_no=None).order_by('emp_no').values('emp_no').distinct()
+        context['ppecodes'] = PPELog.objects.exclude(ppe_code=None).order_by('ppe_code').values(
+            'ppe_code').distinct()
+        context['ppes'] = PPE.objects.exclude(ppe_code=None).order_by('ppe_code').distinct()
+        context['projectnames'] = PPELog.objects.exclude(project_name=None).order_by('project_name').values(
+            'project_name').distinct()
+        context['projects'] = Project.objects.filter(proj_status="On-going").order_by('proj_name').values(
+            'proj_name').distinct()
+        return context
+
+
+@ajax_login_required
+def ajax_ppelog(request):
+    if request.method == "POST":
+        ppelogs = PPELog.objects.all()
+
+        return render(request, 'accounts/ajax-ppe-log.html', {'ppelogs': ppelogs})
+
+
+@ajax_login_required
+def ajax_ppelog_filter(request):
+    if request.method == "POST":
+        search_empno = request.POST.get('search_empno')
+        search_name = request.POST.get('search_name')
+        search_code = request.POST.get('search_code')
+        if search_empno != "" and search_name == "" and search_code == "":
+            materiallogs = PPELog.objects.filter(emp_no__iexact=search_empno)
+
+        elif search_empno != "" and search_name != "" and search_code == "":
+            materiallogs = PPELog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name)
+
+        elif search_empno != "" and search_name != "" and search_code != "":
+            materiallogs = PPELog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name,
+                                                      ppe_code__iexact=search_code)
+
+        elif search_empno == "" and search_name != "" and search_code == "":
+            materiallogs = PPELog.objects.filter(project_name__iexact=search_name)
+
+        elif search_empno == "" and search_name != "" and search_code != "":
+            materiallogs = PPELog.objects.filter(ppe_code__iexact=search_code,
+                                                      project_name__iexact=search_name)
+
+        elif search_empno == "" and search_name == "" and search_code != "":
+            materiallogs = PPELog.objects.filter(ppe_code__iexact=search_code)
+
+        elif search_empno != "" and search_name == "" and search_code != "":
+            materiallogs = PPELog.objects.filter(emp_no__iexact=search_empno, ppe_code__iexact=search_code)
+
+        return render(request, 'accounts/ajax-ppe-log.html', {'ppelogs': materiallogs})
+
+
+@ajax_login_required
+def ppelogadd(request):
+    if request.method == "POST":
+        project_name = request.POST.get('project_name')
+        emp_no = request.POST.get('emp_no')
+        material_code = request.POST.get('material_code')
+        product_desc = request.POST.get('product_desc')
+        material_out = request.POST.get('material_out')
+        comment = request.POST.get('comment')
+        date_time = request.POST.get('date_time')
+        materiallogid = request.POST.get('materiallogid')
+        if materiallogid == "-1":
+            try:
+                PPELog.objects.create(
+                    project_name=project_name,
+                    emp_no=emp_no,
+                    ppe_code=material_code,
+                    ppe_desc=product_desc,
+                    ppe_out=material_out,
+                    comment=comment,
+                    date_time=date_time
+                )
+
+                materialInventory = PPE.objects.get(ppe_code=material_code)
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "Materiallog information added!"
+                })
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+        else:
+            try:
+                materiallog = PPELog.objects.get(id=materiallogid)
+                materialInventory = PPE.objects.get(ppe_code=material_code)
+                materialInventory.stock_qty +=int(materiallog.ppe_out)
+                materiallog.project_name = project_name
+                materiallog.emp_no = emp_no
+                materiallog.ppe_code = material_code
+                materiallog.ppe_desc = product_desc
+                materiallog.ppe_out = material_out
+                materiallog.comment = comment
+                materiallog.date_time = date_time
+                materiallog.save()
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "MaterialLog information updated!"
+                })
+
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+
+
+@ajax_login_required
+def ppelogdelete(request):
+    if request.method == "POST":
+        materiallogid = request.POST.get('materiallogid')
+        materiallog = PPELog.objects.get(id=materiallogid)
+        material_code=materiallog.ppe_code
+        material_out=materiallog.ppe_out
+        materiallog.delete()
+
+        materialInventory = PPE.objects.get(ppe_code=material_code)
+        materialInventory.stock_qty += int(material_out)
+        materialInventory.save()
+        return JsonResponse({'status': 'ok'})
+
+
+@ajax_login_required
+def getPPElog(request):
+    if request.method == "POST":
+        materiallogid = request.POST.get('materiallogid')
+        materiallog = PPELog.objects.get(id=materiallogid)
+        data = {
+            'emp_no': materiallog.emp_no,
+            'material_code': materiallog.ppe_code,
+            'project_name': materiallog.project_name,
+            'material_out': materiallog.ppe_out,
+            'comment': materiallog.comment,
+            'date_time': materiallog.date_time.strftime('%d %b, %Y %H:%M')
+
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+
+@method_decorator(login_required, name='dispatch')
+class StrationarylogList(ListView):
+    model = PPELog
+    template_name = "accounts/stationarylog.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['empids'] = User.objects.filter(
+            Q(role__icontains='Supervisors') | Q(role__icontains='Managers') | Q(role__icontains='Engineers') | Q(role__icontains='Admin'))\
+            .order_by('empid').values('empid').distinct()
+        context['emp_nos'] = StationaryLog.objects.exclude(emp_no=None).order_by('emp_no').values('emp_no').distinct()
+        context['stationarycodes'] = StationaryLog.objects.exclude(stationary_code=None).order_by('stationary_code').values(
+            'stationary_code').distinct()
+        context['stationaries'] = Stationary.objects.exclude(stationary_code=None).order_by('stationary_code').distinct()
+        context['projectnames'] = StationaryLog.objects.exclude(project_name=None).order_by('project_name').values(
+            'project_name').distinct()
+        context['projects'] = Project.objects.filter(proj_status="On-going").order_by('proj_name').values(
+            'proj_name').distinct()
+        return context
+
+
+@ajax_login_required
+def ajax_stationarylog(request):
+    if request.method == "POST":
+        stationarylogs = StationaryLog.objects.all()
+        return render(request, 'accounts/ajax-stationary-log.html', {'stationarylogs': stationarylogs})
+
+
+@ajax_login_required
+def ajax_stationarylog_filter(request):
+    if request.method == "POST":
+        search_empno = request.POST.get('search_empno')
+        search_name = request.POST.get('search_name')
+        search_code = request.POST.get('search_code')
+        if search_empno != "" and search_name == "" and search_code == "":
+            materiallogs = StationaryLog.objects.filter(emp_no__iexact=search_empno)
+
+        elif search_empno != "" and search_name != "" and search_code == "":
+            materiallogs = StationaryLog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name)
+
+        elif search_empno != "" and search_name != "" and search_code != "":
+            materiallogs = StationaryLog.objects.filter(emp_no__iexact=search_empno, project_name__iexact=search_name,
+                                                      stationary_code__iexact=search_code)
+
+        elif search_empno == "" and search_name != "" and search_code == "":
+            materiallogs = StationaryLog.objects.filter(project_name__iexact=search_name)
+
+        elif search_empno == "" and search_name != "" and search_code != "":
+            materiallogs = StationaryLog.objects.filter(stationary_code__iexact=search_code,
+                                                      project_name__iexact=search_name)
+
+        elif search_empno == "" and search_name == "" and search_code != "":
+            materiallogs = StationaryLog.objects.filter(stationary_code__iexact=search_code)
+
+        elif search_empno != "" and search_name == "" and search_code != "":
+            materiallogs = StationaryLog.objects.filter(emp_no__iexact=search_empno, stationary_code__iexact=search_code)
+
+        return render(request, 'accounts/ajax-ppe-log.html', {'stationarylogs': materiallogs})
+
+
+@ajax_login_required
+def stationarylogadd(request):
+    if request.method == "POST":
+        project_name = request.POST.get('project_name')
+        emp_no = request.POST.get('emp_no')
+        material_code = request.POST.get('material_code')
+        product_desc = request.POST.get('product_desc')
+        material_out = request.POST.get('material_out')
+        comment = request.POST.get('comment')
+        date_time = request.POST.get('date_time')
+        materiallogid = request.POST.get('materiallogid')
+        if materiallogid == "-1":
+            try:
+                StationaryLog.objects.create(
+                    project_name=project_name,
+                    emp_no=emp_no,
+                    stationary_code=material_code,
+                    stationary_desc=product_desc,
+                    stationary_out=material_out,
+                    comment=comment,
+                    date_time=date_time
+                )
+
+                materialInventory = Stationary.objects.get(stationary_code=material_code)
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "Materiallog information added!"
+                })
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+        else:
+            try:
+                materiallog = StationaryLog.objects.get(id=materiallogid)
+                materialInventory = Stationary.objects.get(stationary_code=material_code)
+                materialInventory.stock_qty +=int(materiallog.stationary_out)
+                materiallog.project_name = project_name
+                materiallog.emp_no = emp_no
+                materiallog.stationary_code = material_code
+                materiallog.stationary_desc = product_desc
+                materiallog.stationary_out = material_out
+                materiallog.comment = comment
+                materiallog.date_time = date_time
+                materiallog.save()
+                materialInventory.stock_qty-=int(material_out)
+                materialInventory.save()
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "MaterialLog information updated!"
+                })
+
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+
+
+@ajax_login_required
+def stationarylogdelete(request):
+    if request.method == "POST":
+        materiallogid = request.POST.get('materiallogid')
+        materiallog = StationaryLog.objects.get(id=materiallogid)
+        material_code=materiallog.stationary_code
+        material_out=materiallog.stationary_out
+        materiallog.delete()
+
+        materialInventory = Stationary.objects.get(stationary_code=material_code)
+        materialInventory.stock_qty += int(material_out)
+        materialInventory.save()
+        return JsonResponse({'status': 'ok'})
+
+
+@ajax_login_required
+def getStationarylog(request):
+    if request.method == "POST":
+        materiallogid = request.POST.get('materiallogid')
+        print("-----", materiallogid)
+        materiallog = StationaryLog.objects.get(id=materiallogid)
+        data = {
+            'emp_no': materiallog.emp_no,
+            'material_code': materiallog.stationary_code,
+            'project_name': materiallog.project_name,
+            'material_out': materiallog.stationary_out,
             'comment': materiallog.comment,
             'date_time': materiallog.date_time.strftime('%d %b, %Y %H:%M')
 
@@ -1024,11 +1358,12 @@ def ajax_otcalculation(request):
     if request.method == "POST":
         current_year = datetime.datetime.today().year
         current_month = datetime.datetime.today().month
-        str_query = "SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date) AND YEAR(W.checkin_time) = " + str(
+        str_query = "SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O" \
+                    " WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date) AND YEAR(W.checkin_time) = " + str(
             current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
 
         # For test
-        # current_year = "2021"
+        # current_year = "2022"
         # current_month = "8"
         # str_query = "SELECT W.id, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W where YEAR(W.checkin_time) = " + str(
         #     current_year) + " AND  MONTH(W.checkin_time) = " + str(current_month) + " ORDER BY W.checkin_time ASC"
@@ -1036,10 +1371,95 @@ def ajax_otcalculation(request):
         query_ots = WorkLog.objects.raw(str_query)
 
         for q in query_ots:
+
             if q.checkout_time is not None and q.checkin_time is not None:
                 modetime = datetime.timedelta(hours=17)
                 holiday_modetime = datetime.timedelta(hours=8)
 
+                t_out = q.checkout_time
+                t_in = q.checkin_time
+                if q.checkout_time.date() > q.checkin_time.date():
+                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute,
+                                                  seconds=t_out.second) + datetime.timedelta(hours=24)
+                else:
+                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute, seconds=t_out.second)
+
+                timestart = datetime.timedelta(hours=t_in.hour, minutes=t_in.minute, seconds=t_in.second)
+
+                check_weekday = q.checkin_time.weekday()
+                check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
+
+                q.firsthr = 0
+                q.meal_allowance = 0
+                q.secondhr = 0
+                q.ph = 0
+
+                # For holiday
+                if check_holiday == True:
+                    q.ph += 1
+
+                # For Sunday
+                if check_weekday == 6:
+                    # over 5:00 pm
+                    if timediff > modetime:
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
+                        # over 5 hours of overtime allow meals.
+
+                        if mins >= 20:
+                            q.firsthr += mins * 0.25 - 0.5
+                            q.meal_allowance += 1
+                        # under 5 hours of overtime just consider 1.5HR
+                        else:
+                            q.firsthr += mins * 0.25
+
+                        # For the 2.0HR part of over 5:00 pm
+                        if modetime > timestart:
+                            hr2_min_check = (modetime - timestart).total_seconds() // 60
+                            hr2_mins = hr2_min_check // 15
+                            if hr2_mins > 16:
+                                q.secondhr += hr2_mins * 0.25 - 1
+                            else:
+                                q.secondhr += hr2_mins * 0.25
+                    else:
+                        ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
+                        ph_mins = ph_min_check // 15
+                        if ph_mins >= 24:
+                            q.secondhr += (ph_mins * 0.25 - 1)
+                        else:
+                            q.secondhr += (ph_mins * 0.25)
+                # For normal days (Mon ~ Sat)
+                else:
+                    if timediff > modetime:
+                        min_check = (timediff - modetime).total_seconds() // 60
+                        mins = min_check // 15
+                        if mins >= 20:
+                            q.firsthr += (mins * 0.25 - 0.5)
+                            q.meal_allowance += 1
+                        else:
+                            q.firsthr += (mins * 0.25)
+
+        return render(request, 'accounts/ajax-otcalculation.html', {'otcalculations': query_ots})
+
+@ajax_login_required
+def ajax_otcalculation_filter(request):
+    if request.method == "POST":
+        checkin_time = request.POST.get('checkin_time')
+        checkout_time = request.POST.get('checkout_time')
+        str_query = "SELECT F.id, F.approved_hour, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+
+        # For test.
+        # str_query = "SELECT F.id, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id,W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+
+        # holiday_cnt = Holiday.objects.filter(date__range=[datetime.datetime.strptime(checkin_time, '%Y-%m-%d %H:%M').date(),
+        #                                                     datetime.datetime.strptime(checkout_time,
+        #                                                                       '%Y-%m-%d %H:%M').date()]).count()
+        # print("----holiday count----", holiday_cnt)
+
+        query_ots = WorkLog.objects.raw(str_query)
+        for q in query_ots:
+            if q.checkout_time is not None and q.checkin_time is not None:
+                modetime = datetime.timedelta(hours=17)
                 t_out = q.checkout_time
                 t_in = q.checkin_time
                 if q.checkout_time.date() > q.checkin_time.date():
@@ -1109,13 +1529,18 @@ def ajax_otcalculation(request):
 @ajax_login_required
 def ajax_otcalculation_summary(request):
     if request.method == "POST":
-        str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.approved_hour, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F, tb_user AS U WHERE F.emp_no = U.empid ORDER BY F.checkin_time ASC"
+        current_year = datetime.datetime.today().year
+        current_month = datetime.datetime.today().month
+        holiday_cnt = Holiday.objects.filter(date__year=current_year, date__month=current_month).count()
+
+        str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.approved_hour, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date) " \
+                    "AND YEAR(W.checkin_time) = {0} AND  MONTH(W.checkin_time) = {1}"\
+                    ") AS F, tb_user AS U WHERE F.emp_no = U.empid ORDER BY F.checkin_time ASC".format(str(current_year) ,str(current_month))
 
         query_ots = WorkLog.objects.raw(str_query)
         for q in query_ots:
             if q.checkout_time is not None and q.checkin_time is not None:
                 modetime = datetime.timedelta(hours=17)
-                holiday_modetime = datetime.timedelta(hours=8)
 
                 t_out = q.checkout_time
                 t_in = q.checkin_time
@@ -1128,16 +1553,11 @@ def ajax_otcalculation_summary(request):
                 timestart = datetime.timedelta(hours=t_in.hour, minutes=t_in.minute, seconds=t_in.second)
 
                 check_weekday = q.checkin_time.weekday()
-                check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
 
                 q.firsthr = 0
                 q.meal_allowance = 0
                 q.secondhr = 0
-                q.ph = 0
-
-                # For holiday
-                if check_holiday == True:
-                    q.ph += 1
+                q.ph = holiday_cnt
 
                 # For Sunday
                 if check_weekday == 6:
@@ -1191,22 +1611,20 @@ def ajax_otcalculation_summary(request):
         for empd in empdata:
             summary_firsthr = 0
             summary_secondhr = 0
-            summary_ph = 0
+            summary_ph = holiday_cnt
             summary_meal = 0
             total_working_days = 0
             temp_checkin_date = None
             for query_ot in query_ots:
                 if empd == query_ot.emp_no:
                     # For test
-                    query_ot.approved_hour = 10
+                    # query_ot.approved_hour = 10
                     if temp_checkin_date is None:
                         temp_checkin_date = query_ot.checkin_time.date()
                         total_working_days += 1
-                        summary_ph += query_ot.ph
                     if temp_checkin_date != query_ot.checkin_time.date():
                         temp_checkin_date = query_ot.checkin_time.date()
                         total_working_days += 1
-                        summary_ph += query_ot.ph
 
                     s_firstht = min(float(query_ot.approved_hour), float(query_ot.firsthr))
                     s_secondht = min(float(query_ot.approved_hour), float(query_ot.secondhr))
@@ -1231,6 +1649,13 @@ def ajax_otcalculation_filter_summary(request):
         checkin_time = request.POST.get('checkin_time')
         checkout_time = request.POST.get('checkout_time')
         str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.approved_hour, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F, tb_user AS U WHERE F.emp_no = U.empid" + " AND F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+        # For test
+        # str_query = "SELECT F.id, F.emp_no,U.basic_salary,F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W) AS F, tb_user AS U WHERE F.emp_no = U.empid" + " AND F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
+        holiday_cnt = Holiday.objects.filter(date__range=[datetime.datetime.strptime(checkin_time, '%Y-%m-%d').date(),
+                                                            datetime.datetime.strptime(checkout_time,
+                                                                              '%Y-%m-%d').date()]).count()
+        # print("----holiday count----", holiday_cnt)
+
         query_ots = WorkLog.objects.raw(str_query)
         for q in query_ots:
             if q.checkout_time is not None and q.checkin_time is not None:
@@ -1248,16 +1673,10 @@ def ajax_otcalculation_filter_summary(request):
                 timestart = datetime.timedelta(hours=t_in.hour, minutes=t_in.minute, seconds=t_in.second)
 
                 check_weekday = q.checkin_time.weekday()
-                check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
-
                 q.firsthr = 0
                 q.meal_allowance = 0
                 q.secondhr = 0
-                q.ph = 0
-
-                # For holiday
-                if check_holiday == True:
-                    q.ph += 1
+                q.ph = holiday_cnt
 
                 # For Sunday
                 if check_weekday == 6:
@@ -1311,22 +1730,20 @@ def ajax_otcalculation_filter_summary(request):
         for empd in empdata:
             summary_firsthr = 0
             summary_secondhr = 0
-            summary_ph = 0
+            summary_ph = q.ph
             summary_meal = 0
             total_working_days = 0
             temp_checkin_date = None
             for query_ot in query_ots:
                 if empd == query_ot.emp_no:
                     # For test
-                    query_ot.approved_hour = 10
+                    # query_ot.approved_hour = 10
                     if temp_checkin_date is None:
                         temp_checkin_date = query_ot.checkin_time.date()
                         total_working_days += 1
-                        summary_ph += query_ot.ph
                     if temp_checkin_date != query_ot.checkin_time.date():
                         temp_checkin_date = query_ot.checkin_time.date()
                         total_working_days += 1
-                        summary_ph += query_ot.ph
 
                     s_firstht = min(float(query_ot.approved_hour), float(query_ot.firsthr))
                     s_secondht = min(float(query_ot.approved_hour), float(query_ot.secondhr))
@@ -1344,84 +1761,6 @@ def ajax_otcalculation_filter_summary(request):
 
         return render(request, 'accounts/ajax-otcalculation-summary.html', {'otsummaries': summary_filter_data})
 
-
-@ajax_login_required
-def ajax_otcalculation_filter(request):
-    if request.method == "POST":
-        checkin_time = request.POST.get('checkin_time')
-        checkout_time = request.POST.get('checkout_time')
-        str_query = "SELECT F.id, F.approved_hour, F.emp_no, F.projectcode, F.checkin_time, F.checkout_time FROM (SELECT W.id, O.approved_hour, W.emp_no, W.projectcode, W.checkin_time, W.checkout_time FROM tb_worklog AS W, tb_ot as O WHERE W.projectcode = O.proj_id and DATE(W.checkin_time) = DATE(O.date)) AS F WHERE F.checkin_time >= " + "'" + checkin_time + "'" + " AND F.checkout_time <= " + "'" + checkout_time + "'"
-        query_ots = WorkLog.objects.raw(str_query)
-
-        for q in query_ots:
-            if q.checkout_time is not None and q.checkin_time is not None:
-                modetime = datetime.timedelta(hours=17)
-                holiday_modetime = datetime.timedelta(hours=8)
-
-                t_out = q.checkout_time
-                t_in = q.checkin_time
-                if q.checkout_time.date() > q.checkin_time.date():
-                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute,
-                                                  seconds=t_out.second) + datetime.timedelta(hours=24)
-                else:
-                    timediff = datetime.timedelta(hours=t_out.hour, minutes=t_out.minute, seconds=t_out.second)
-
-                timestart = datetime.timedelta(hours=t_in.hour, minutes=t_in.minute, seconds=t_in.second)
-
-                check_weekday = q.checkin_time.weekday()
-                check_holiday = Holiday.objects.filter(date=q.checkin_time.date()).exists()
-
-                q.firsthr = 0
-                q.meal_allowance = 0
-                q.secondhr = 0
-                q.ph = 0
-
-                # For holiday
-                if check_holiday == True:
-                    q.ph += 1
-
-                # For Sunday
-                if check_weekday == 6:
-                    # over 5:00 pm
-                    if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds() // 60
-                        mins = min_check // 15
-                        # over 5 hours of overtime allow meals.
-
-                        if mins >= 20:
-                            q.firsthr += mins * 0.25 - 0.5
-                            q.meal_allowance += 1
-                        # under 5 hours of overtime just consider 1.5HR
-                        else:
-                            q.firsthr += mins * 0.25
-
-                        # For the 2.0HR part of over 5:00 pm
-                        if modetime > timestart:
-                            hr2_min_check = (modetime - timestart).total_seconds() // 60
-                            hr2_mins = hr2_min_check // 15
-                            if hr2_mins > 16:
-                                q.secondhr += hr2_mins * 0.25 - 1
-                            else:
-                                q.secondhr += hr2_mins * 0.25
-                    else:
-                        ph_min_check = (q.checkout_time - q.checkin_time).total_seconds() // 60
-                        ph_mins = ph_min_check // 15
-                        if ph_mins >= 24:
-                            q.secondhr += (ph_mins * 0.25 - 1)
-                        else:
-                            q.secondhr += (ph_mins * 0.25)
-                # For normal days (Mon ~ Sat)
-                else:
-                    if timediff > modetime:
-                        min_check = (timediff - modetime).total_seconds() // 60
-                        mins = min_check // 15
-                        if mins >= 20:
-                            q.firsthr += (mins * 0.25 - 0.5)
-                            q.meal_allowance += 1
-                        else:
-                            q.firsthr += (mins * 0.25)
-
-        return render(request, 'accounts/ajax-otcalculation.html', {'otcalculations': query_ots})
 
 
 @ajax_login_required
@@ -1734,7 +2073,7 @@ def userissuetooladd(request):
                 UserItemTool.objects.create(
                     description=tdescription,
                     issue_date=tissued_date,
-                    uom=tuom,
+                    uom=Uom.objects.get(name=tuom),
                     qty=tqty,
                     issued_by=tissued_by,
                     emp_id=sel_user.username
@@ -1753,7 +2092,7 @@ def userissuetooladd(request):
                 usertool = UserItemTool.objects.get(id=toolid)
                 usertool.description = tdescription
                 usertool.issue_date = tissued_date
-                usertool.uom = tuom
+                usertool.uom=Uom.objects.get(name=tuom)
                 usertool.qty = tqty
                 usertool.issued_by = tissued_by
                 usertool.emp_id = sel_user.username
@@ -1787,7 +2126,7 @@ def userissueppeadd(request):
                 UserItemIssued.objects.create(
                     description=idescription,
                     issue_date=issued_date,
-                    uom=iuom,
+                    uom=Uom.objects.get(name=iuom),
                     qty=iqty,
                     empid=sel_user.empid,
                     issued_by=issued_by
@@ -1796,6 +2135,27 @@ def userissueppeadd(request):
                     "status": "Success",
                     "messages": "User Issued Item information added!"
                 })
+            except IntegrityError as e:
+                return JsonResponse({
+                    "status": "Error",
+                    "messages": "Error is existed!"
+                })
+        else:
+            try:
+                userItemIssue = UserItemIssued.objects.get(id=issueid)
+                userItemIssue.description = idescription
+                userItemIssue.issue_date = issued_date
+                userItemIssue.uom = Uom.objects.get(name=iuom)
+                userItemIssue.qty = iqty
+                userItemIssue.issued_by = issued_by
+                userItemIssue.emp_id = sel_user.empid
+                userItemIssue.save()
+
+                return JsonResponse({
+                    "status": "Success",
+                    "messages": "User Issued Item information updated!"
+                })
+
             except IntegrityError as e:
                 return JsonResponse({
                     "status": "Error",
@@ -1850,3 +2210,72 @@ def updateUserSignature(request):
                 "status": "Error",
                 "messages": "Error is existed!"
             })
+@ajax_login_required
+def certdelete(request):
+    if request.method == "POST":
+        certid = request.POST.get('certdel_id')
+        usercert = UserCert.objects.get(id=certid)
+        usercert.delete()
+        return JsonResponse({'status': 'ok'})
+
+@ajax_login_required
+def getCert(request):
+    if request.method == "POST":
+        certId = request.POST.get('certid')
+        userCert = UserCert.objects.get(id=certId)
+        data = {
+            'emp_id': userCert.emp_id,
+            'course': userCert.course,
+            'course_no': userCert.course_no,
+            'school': userCert.school,
+            'course_expiry': userCert.course_expiry.strftime('%d %b %Y'),
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+
+
+@ajax_login_required
+def issueddelete(request):
+    if request.method == "POST":
+        issuedid = request.POST.get('issueddel_id')
+        userIssued = UserItemIssued.objects.get(id=issuedid)
+        userIssued.delete()
+        return JsonResponse({'status': 'ok'})
+
+@ajax_login_required
+def getIssuedItem(request):
+    if request.method == "POST":
+        issueId = request.POST.get('issueId')
+        userItemIssued = UserItemIssued.objects.get(id=issueId)
+        data = {
+            'issueid': userItemIssued.id,
+            'idescription': userItemIssued.description,
+            'iqty': userItemIssued.qty,
+            'issued_by': userItemIssued.issued_by,
+            'uom': userItemIssued.uom.name,
+            'issued_date': userItemIssued.issue_date.strftime('%d %b %Y'),
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+
+@ajax_login_required
+def toolItemdelete(request):
+    if request.method == "POST":
+        toolid = request.POST.get('tooldel_id')
+        userItemTool = UserItemTool.objects.get(id=toolid)
+        userItemTool.delete()
+        return JsonResponse({'status': 'ok'})
+
+@ajax_login_required
+def getToolItem(request):
+    if request.method == "POST":
+        toolId = request.POST.get('toolId')
+        userItemIssued = UserItemTool.objects.get(id=toolId)
+        data = {
+            'toolid': userItemIssued.id,
+            'tdescription': userItemIssued.description,
+            'tqty': userItemIssued.qty,
+            'tissued_by': userItemIssued.issued_by,
+            'tuom': userItemIssued.uom.name,
+            'tissued_date': userItemIssued.issue_date.strftime('%d %b %Y'),
+        }
+        return JsonResponse(json.dumps(data), safe=False)
+

@@ -731,6 +731,21 @@ def readnotify(request):
         return JsonResponse({'status': 'ok'})
 
 @ajax_login_required
+def unreadnotify(request):
+    if request.method == "POST":
+        notifyid = request.POST.get('notifyid')
+        request.user.notifications.get(id=notifyid).mark_as_unread()
+
+        return JsonResponse({'status': 'ok'})
+@ajax_login_required
+def removenotify(request):
+    if request.method == "POST":
+        notifyid = request.POST.get('notifyid')
+        notification=request.user.notifications.get(id=notifyid)
+        notification.delete()
+        return JsonResponse({'status': 'ok'})
+
+@ajax_login_required
 def markUserNotificationsRead(request):
     if request.method == 'POST':
         user_id = request.POST['user_id']
@@ -759,9 +774,14 @@ class QuotationDetailView(DetailView):
             data.append(managers)
         data.extend(User.objects.select_related('privilege'))
         context['salepersons'] = data
-        context['scope_list'] = Scope.objects.filter(quotation_id=content_pk, parent=None)
+        # context['scope_list'] = Scope.objects.filter(quotation_id=content_pk, parent=None)
+        scopes = Scope.objects.filter(quotation_id=content_pk, parent=None)
         if Scope.objects.filter(quotation_id=content_pk, parent=None).exists():
             subtotal = Scope.objects.filter(quotation_id=content_pk, parent=None).aggregate(Sum('amount'))['amount__sum']
+            for scope in scopes:
+                scope.allocation_perc = 100*scope.amount/subtotal
+                scope.save()
+            context['scope_list']=scopes
             gst = float(subtotal) * 0.07
             context['subtotal'] = subtotal
             context['gst'] = gst
@@ -1821,6 +1841,7 @@ def exportQuotationPDF(request, value):
         data.append(temp_data)
         index += 1
     note = []
+
     note.append("")
     
     if quotation.note:
@@ -1864,8 +1885,8 @@ def exportQuotationPDF(request, value):
             style=[
                 ('BACKGROUND', (0, 0), (5, 0), colors.lavender),
                 ('GRID',(0,0),(-1,-1),0.5,colors.black),
-                ('SPAN',(1,-5),(-1,-5)),
-                ('SPAN',(1,-4),(-1,-4)),
+                # ('SPAN',(1,-5),(-1,-5)),
+                # ('SPAN',(1,-4),(-1,-4)),
                 ('VALIGN',(1,-4),(-1,-4), "MIDDLE"),
             ],
         )
@@ -2110,6 +2131,7 @@ class ReportDetailView(DetailView):
         context['salerep'] = content_pk
         context['contacts'] = Contact.objects.all()
         context['comments'] = SaleReportComment.objects.filter(salereport_id=content_pk)
+
         return context
 
 @ajax_login_required

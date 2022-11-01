@@ -303,12 +303,22 @@
         $("#expensesclaimmodal").modal('show');
 
     }
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
     $("#expenseclaimadd").on('click', function(e){
         $("#head_title").html('Add New Expenses Claim');
         $(".btn_expensesadd").html('Add');
         $("#expensesid").val("-1");
         $("#claim_no").val("");
-        $("#submission_date").val("");
+
+
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = monthNames[today.getMonth()];
+        var yyyy = today.getFullYear();
+        $("#submission_date").val(dd + " " + mm + ", " + yyyy);
+        $('#submission_date').datepicker('setDate', dd + " " + mm + ", " + yyyy);
         if ('{{request.user.empid}}' != "None") {
             $("#emp_id").val('{{request.user.empid}}');
         } else {

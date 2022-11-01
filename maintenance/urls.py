@@ -39,5 +39,6 @@ urlpatterns = [
     url(r'^ajax-export-maintenance/$', views.ajax_export_maintenance, name='ajax-export-maintenance'),
 
     url(r'^ajax-import-maintenance/$', views.ajax_import_maintenance, name='ajax-import-maintenance'),
+    url(r'^ajax_add_mainsrsignature_sign/$', views.addMainSrSign, name='ajax_add_mainsrsignature_sign'),
+    url(r'^ajax_get_mainsrsignature_sign/$', views.getMainSrSign, name='ajax_get_mainsrsignature_sign'),
 ]
-

@@ -4,31 +4,31 @@
         <thead>
             <tr>
                 <th>Emp No</th>
-                <th>Material Code</th>
-                <th>Product Description</th>
+                <th>PPE Code</th>
+                <th>PPE Description</th>
                 <th>Project Name</th>
-                <th>Material Out</th>
+                <th>PPE Out</th>
                 <th>Comment</th>
                 <th>Date & Time</th>
                 <th>Action</th>
             </tr>
         </thead>
         <tbody>
-         {% for materiallog in materiallogs %}
+         {% for ppelog in ppelogs %}
             <tr>
-                <td class="align-middle">{{materiallog.emp_no|default_if_none:""}}</td>
-                <td class="align-middle">{{materiallog.material_code|default_if_none:""}}</td>
-                <td class="align-middle">{{materiallog.product_desc|default_if_none:""}}</td>
-                <td class="align-middle">{{materiallog.project_name|default_if_none:""}}</td>
-                <td class="align-middle">{{materiallog.material_out|default_if_none:""}}</td>
-                
-                <td class="align-middle">{{materiallog.comment|default_if_none:""}}</td>
-                <td class="align-middle">{{materiallog.date_time|date:'d M, Y H:i'|default_if_none:""}}</td>
+                <td class="align-middle">{{ppelog.emp_no|default_if_none:""}}</td>
+                <td class="align-middle">{{ppelog.ppe_code|default_if_none:""}}</td>
+                <td class="align-middle">{{ppelog.ppe_desc|default_if_none:""}}</td>
+                <td class="align-middle">{{ppelog.project_name|default_if_none:""}}</td>
+                <td class="align-middle">{{ppelog.ppe_out|default_if_none:""}}</td>
+
+                <td class="align-middle">{{ppelog.comment|default_if_none:""}}</td>
+                <td class="align-middle">{{ppelog.date_time|date:'d M, Y H:i'|default_if_none:""}}</td>
                 <td class="align-middle">
-                    <a href="javascript:void(0);" onclick="updatemateriallog('{{materiallog.id}}')" class="btn btn-outline-primary btn-sm edit com_update" title="Edit">
+                    <a href="javascript:void(0);" onclick="updatemateriallog('{{ppelog.id}}')" class="btn btn-outline-primary btn-sm edit com_update" title="Edit">
                         <i class="fas fa-pencil-alt"></i>
                     </a>
-                    <a href="javascript:void(0);" onclick="deletemateriallog('{{materiallog.id}}')" class="btn btn-outline-danger btn-sm delete" title="Delete">
+                    <a href="javascript:void(0);" onclick="deletemateriallog('{{ppelog.id}}')" class="btn btn-outline-danger btn-sm delete" title="Delete">
                         <i class="far fa-trash-alt"></i>
                     </a>
                 </td>
@@ -44,7 +44,7 @@
             "<'row'<'col-sm-12'tr>>" +
             "<'row'<'col-sm-2 text-start'i><'col-sm-2 mt-2 text-start'l><'col-sm-8 mt-2'p>>",
         buttons: [
-            
+
             {
                 extend: 'colvis',
                 text: "Filter Column",
@@ -74,7 +74,7 @@
                     },
                 ]
             },
-         
+
         ],
     }).buttons().container().appendTo(".export_button");
     $(".dataTables_length select").addClass("form-select form-select-sm");

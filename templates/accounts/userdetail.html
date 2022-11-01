@@ -350,6 +350,7 @@
                                             <th>Course No</th>
                                             <th>School</th>
                                             <th>Expiry Date</th>
+                                            <th>Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -360,6 +361,14 @@
                                             <td>{{cert.course_no|default_if_none:""}}</td>
                                             <td>{{cert.school|default_if_none:""}}</td>
                                             <td>{{cert.course_expiry|default_if_none:""}}</td>
+                                            <td class="align-middle">
+                                                <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm edit" onclick="updateCertificates('{{cert.id}}')" title="Edit">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </a>
+                                                <a href="javascript:void(0);" onclick="deleteCertificates('{{cert.id}}')" class="btn btn-outline-danger btn-sm delete" title="Delete">
+                                                    <i class="far fa-trash-alt"></i>
+                                                </a>
+                                            </td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -403,6 +412,7 @@
                                                             <th>UOM</th>
                                                             <th>Issued Date</th>
                                                             <th>Issued By</th>
+                                                            <th>Action</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -414,6 +424,14 @@
                                                             <td>{{issueditem.uom|default_if_none:""}}</td>
                                                             <td>{{issueditem.issue_date|date:'d M, Y'|default_if_none:""}}</td>
                                                             <td>{{issueditem.issued_by|default_if_none:""}}</td>
+                                                            <td class="align-middle">
+                                                                <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm edit" onclick="updateUserIssuedItems('{{issueditem.id}}')" title="Edit">
+                                                                    <i class="fas fa-pencil-alt"></i>
+                                                                </a>
+                                                                <a href="javascript:void(0);" onclick="deleteUserIssuedItems('{{issueditem.id}}')" class="btn btn-outline-danger btn-sm delete" title="Delete">
+                                                                    <i class="far fa-trash-alt"></i>
+                                                                </a>
+                                                            </td>
                                                         </tr>
                                                         {% endfor %}
                                                     </tbody>
@@ -437,6 +455,7 @@
                                                             <th>UOM</th>
                                                             <th>Issued Date</th>
                                                             <th>Issued By</th>
+                                                            <th>Action</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -448,6 +467,14 @@
                                                             <td>{{issuedtool.uom|default_if_none:""}}</td>
                                                             <td>{{issuedtool.issue_date|date:'d M, Y'|default_if_none:""}}</td>
                                                             <td>{{issuedtool.issued_by|default_if_none:""}}</td>
+                                                            <td class="align-middle">
+                                                                <a href="javascript:void(0);" class="btn btn-outline-primary btn-sm edit" onclick="updateUserToolItems('{{issuedtool.id}}')" title="Edit">
+                                                                    <i class="fas fa-pencil-alt"></i>
+                                                                </a>
+                                                                <a href="javascript:void(0);" onclick="deleteUserToolItems('{{issuedtool.id}}')" class="btn btn-outline-danger btn-sm delete" title="Delete">
+                                                                    <i class="far fa-trash-alt"></i>
+                                                                </a>
+                                                            </td>
                                                         </tr>
                                                         {% endfor %}
                                                     </tbody>
@@ -467,12 +494,14 @@
         </div>
     </div>
 </div>
+
+
 <!--Change User Signature modal content -->
 <div id="signaturemodal" class="modal fade" role="dialog" aria-labelledby="signatureModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="head_title_signature">Change User Signature</h5>
+                <h5 class="modal-title" id="sign_head_title_signature">Change User Signature</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
             </div>
             <div class="modal-body" id="manage_signature">
@@ -551,12 +580,35 @@
     </div>
     <!-- /.modal-dialog -->
 </div>
+
+<!-- Delete Cert modal content -->
+<div id="certdeleteModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="certdelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="certdelModalLabel">Delete Certificates</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+            </div>
+            <div class="modal-body">
+                <h5>Are you sure you want to delete this record?</h5>
+                <input type="hidden" id="certdel_id" value="-1">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary waves-effect btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button id="certdel_confirm" type="button" class="btn btn-primary waves-effect btn-sm waves-light">OK</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+
 <!--Issued modal content -->
 <div id="issuemodal" class="modal fade" role="dialog" aria-labelledby="ppeModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="head_title">Add New Issued</h5>
+                <h5 class="modal-title" id="issue_head_title">Add New Issued</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
             </div>
             <div class="modal-body" id="manage_info_issue">
@@ -581,8 +633,15 @@
                     <div class="mb-3 row">
                         <label for="iuom" class="col-md-4 col-form-label">UOM:</label>
                         <div class="col-md-8">
-                            <input class="form-control" type="text" id="iuom" required>
+                            <select class="form-control select2" id="iuom" required>
+                                <option value="">Select the Uom</option>
+                                {% for uom in uoms %}
+                                    <option value="{{uom.name}}">{{uom.name}}</option>
+                                {% endfor %}
+                            </select>
+<!--                            <input class="form-control" type="text" id="iuom" required>-->
                         </div>
+
                     </div>
                     <div class="mb-3 row">
                         <label for="issued_date" class="col-md-4 col-form-label">Issued Date:</label>
@@ -616,12 +675,36 @@
     </div>
     <!-- /.modal-dialog -->
 </div>
+
+
+<!-- Delete Issued modal content -->
+<div id="issueddeleteModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="issueddelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="issueddelModalLabel">Delete Items issued to Staff</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+            </div>
+            <div class="modal-body">
+                <h5>Are you sure you want to delete this record?</h5>
+                <input type="hidden" id="issueddel_id" value="-1">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary waves-effect btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button id="issueddel_confirm" type="button" class="btn btn-primary waves-effect btn-sm waves-light">OK</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+
 <!--Tools modal content -->
 <div id="toolmodal" class="modal fade" role="dialog" aria-labelledby="toolModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-md modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="head_title">Add New Issued Tool</h5>
+                <h5 class="modal-title" id="tool_head_title">Add New Issued Tool</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
             </div>
             <div class="modal-body" id="manage_info_tool">
@@ -643,12 +726,20 @@
                             <input class="form-control" type="number" id="tqty" required>
                         </div>
                     </div>
+
+
                     <div class="mb-3 row">
                         <label for="tuom" class="col-md-4 col-form-label">UOM:</label>
                         <div class="col-md-8">
-                            <input class="form-control" type="text" id="tuom" required>
+                            <select class="form-control select2" id="tuom" required>
+                                <option value="">Select the Uom</option>
+                                {% for uom in uoms %}
+                                    <option value="{{uom.name}}">{{uom.name}}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                     </div>
+
                     <div class="mb-3 row">
                         <label for="tissued_date" class="col-md-4 col-form-label">Issued Date:</label>
                         <div class="col-md-8">
@@ -675,6 +766,28 @@
                 <button type="button" class="btn btn-secondary waves-effect btn-sm" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary waves-effect waves-light btn-sm btn_tooladd">Add</button>
                 
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+
+<!-- Delete tools modal content -->
+<div id="tooldeleteModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="tooldelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tooldelModalLabel">Delete Issued Tool to Staff</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+            </div>
+            <div class="modal-body">
+                <h5>Are you sure you want to delete this record?</h5>
+                <input type="hidden" id="tooldel_id" value="-1">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary waves-effect btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button id="tooldel_confirm" type="button" class="btn btn-primary waves-effect btn-sm waves-light">OK</button>
             </div>
         </div>
         <!-- /.modal-content -->
@@ -714,6 +827,10 @@
             "<'row'<'col-sm-12'tr>>" +
             "<'row'<'col-sm-2 text-start'i><'col-sm-2 mt-2 text-start'l><'col-sm-8 mt-2'p>>",
     });
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
     $("#ppetable").DataTable({
         searching: false, 
         paging: true, 
@@ -743,6 +860,7 @@
     $(".select2").select2({width: '100%'});
     $('#issued_by').prop('disabled', false);
     $(".tissued_by").select2({width: '100%', dropdownParent: $("#manage_info_tool")});
+    $("#tuom").select2({width: '100%', dropdownParent: $("#manage_info_tool")});
     function generatepassword(length) {
         var result           = '';
         var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -770,24 +888,35 @@
         $("#certmodal").modal('show');
     });
     $("#ppesave").on("click", function(e){
-        $("#head_title").html('Add New Issued');
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = monthNames[today.getMonth()];
+        var yyyy = today.getFullYear();
+        $("#issued_date").val(dd + " " + mm + ", " + yyyy);
+        $('#issued_date').datepicker('setDate', dd + " " + mm + ", " + yyyy);
+
+        $("#issue_head_title").html('Add New Issued');
         $(".btn_issueadd").html('Add');
         $("#issueid").val("-1");
         $("#idescription").val("");
         $("#iqty").val("");
-        $("#iuom").val("");
-        $("#issued_date").val("");
         
         $("#issuemodal").modal('show');
     });
+
     $("#toolssave").on("click", function(e){
-        $("#head_title").html('Add New Issued');
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = monthNames[today.getMonth()];
+        var yyyy = today.getFullYear();
+        $("#tissued_date").val(dd + " " + mm + ", " + yyyy);
+        $('#tissued_date').datepicker('setDate', dd + " " + mm + ", " + yyyy);
+
+        $("#tool_head_title").html('Add New Issued');
         $(".btn_issueadd").html('Add');
         $("#toolid").val("-1");
         $("#tdescription").val("");
         $("#tqty").val("");
-        $("#tuom").val("");
-        $("#tissued_date").val("");
         
         $("#toolmodal").modal('show');
     });
@@ -964,6 +1093,7 @@
         $("#userupdate").show();
     });
     $("#issued_by").select2({width: '100%', dropdownParent: $("#manage_info_issue")});
+    $("#iuom").select2({width: '100%', dropdownParent: $("#manage_info_issue")});
     function formatDate(date) {
         var d = new Date(date),
             month = '' + (d.getMonth() + 1),
@@ -1035,7 +1165,7 @@
         $("#useritem").addClass('active');
     }
     $("#signaturechange").on('click', function(e){
-        $("#head_title_signature").html('Change User Signature');
+        $("#sign_head_title_signature").html('Change User Signature');
         $(".btn_signatureadd").html('Change');
         $("#signaturemodal").modal('show');
     });
@@ -1073,6 +1203,161 @@
             });
         }
         
+    });
+
+    function updateCertificates(id){
+        $("#certid").val(id);
+        $("#head_title").html('Update Certificate');
+        $(".btn_certadd").html('Update');
+        $.ajax({
+            headers: { "X-CSRFToken": '{{csrf_token}}' },
+            url: '{% url "ajax_get_cert" %}',
+            data: {
+                'certid': $("#certid").val(),
+            },
+            type: 'POST',
+            success: function (data) {
+                up_data = JSON.parse(data);
+                flag = false;
+
+                $("#course").val(up_data.course);
+                $('#course_no').trigger('change');
+                $("#course_no").val(up_data.course_no);
+                $('#course_no').trigger('change');
+                $("#school").val(up_data.school);
+                $('#school').trigger('change');
+                $("#course_expiry").val(up_data.course_expiry);
+                $('#course_expiry').trigger('change');
+
+            }
+        });
+        $("#certmodal").modal('show');
+
+    };
+    function deleteCertificates(id) {
+        $("#certdel_id").val(id);
+        $("#certdeleteModal").modal('show');
+    }
+    $("#certdel_confirm").on('click', function(event){
+        $.ajax({
+            headers: { "X-CSRFToken": '{{csrf_token}}' },
+            url: '{% url "ajax_delete_cert" %}',
+            data: {
+                'certdel_id': $("#certdel_id").val(),
+            },
+            type: 'POST',
+            success: function (data) {
+                if (data.status == "ok") {
+                    location.reload();
+                }
+            }
+        });
+        $('#certdeleteModal').modal('hide');
+    });
+
+
+    function updateUserIssuedItems(id){
+        $("#issueid").val(id);
+        $("#issue_head_title").html('Update Issued Item');
+        $(".btn_issueadd").html('Update');
+        $.ajax({
+            headers: { "X-CSRFToken": '{{csrf_token}}' },
+            url: '{% url "ajax_get_issued_item" %}',
+            data: {
+                'issueId': $("#issueid").val(),
+            },
+            type: 'POST',
+            success: function (data) {
+                up_data = JSON.parse(data);
+                flag = false;
+                $("#issueid").val(up_data.issueid);
+                $("#idescription").val(up_data.idescription);
+                $("#iqty").val(up_data.iqty);
+
+                $("#iuom").val(up_data.uom);
+                $('#iuom').trigger('change');
+                $("#issued_by").val(up_data.issued_by);
+                $('#issued_by').trigger('change');
+                $("#issued_date").val(up_data.issued_date);
+                $('#issued_date').trigger('change');
+
+            }
+        });
+        $("#issuemodal").modal('show');
+
+    };
+    function deleteUserIssuedItems(id) {
+        $("#issueddel_id").val(id);
+        $("#issueddeleteModal").modal('show');
+    }
+    $("#issueddel_confirm").on('click', function(event){
+        $.ajax({
+            headers: { "X-CSRFToken": '{{csrf_token}}' },
+            url: '{% url "ajax_delete_issued" %}',
+            data: {
+                'issueddel_id': $("#issueddel_id").val(),
+            },
+            type: 'POST',
+            success: function (data) {
+                if (data.status == "ok") {
+                    location.reload();
+                }
+            }
+        });
+        $('#issueddeleteModal').modal('hide');
+    });
+
+
+
+    function updateUserToolItems(id){
+        $("#toolid").val(id);
+        $("#tool_head_title").html('Update Issued Tool Item');
+        $(".btn_tooladd").html('Update');
+        $.ajax({
+            headers: { "X-CSRFToken": '{{csrf_token}}' },
+            url: '{% url "ajax_get_tool_item" %}',
+            data: {
+                'toolId': $("#toolid").val(),
+            },
+            type: 'POST',
+            success: function (data) {
+                up_data = JSON.parse(data);
+                console.log(up_data)
+                flag = false;
+                $("#toolid").val(up_data.toolid);
+                $("#tdescription").val(up_data.tdescription);
+                $("#tqty").val(up_data.tqty);
+                $("#tuom").val(up_data.tuom);
+                $('#tuom').trigger('change');
+                $("#tissued_by").val(up_data.tissued_by);
+                $('#tissued_by').trigger('change');
+                $("#tissued_date").val(up_data.tissued_date);
+                $('#tissued_date').trigger('change');
+            }
+        });
+        $("#toolmodal").modal('show');
+
+    };
+
+    function deleteUserToolItems(id) {
+        $("#tooldel_id").val(id);
+        $("#tooldeleteModal").modal('show');
+    }
+    $("#tooldel_confirm").on('click', function(event){
+        $.ajax({
+            headers: { "X-CSRFToken": '{{csrf_token}}' },
+            url: '{% url "ajax_delete_toolItem" %}',
+            data: {
+                'tooldel_id': $("#tooldel_id").val(),
+            },
+            type: 'POST',
+            success: function (data) {
+                if (data.status == "ok") {
+                    location.reload();
+                }
+            }
+        });
+        $('#tooldeleteModal').modal('hide');
     });
 </script>
 {% endblock %}

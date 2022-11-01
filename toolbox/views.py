@@ -16,7 +16,7 @@ import base64
 from django.core.files.base import ContentFile
 from dateutil import parser as date_parser
 from sales.decorater import ajax_login_required
-from accounts.models import User
+from accounts.models import User, Role
 from django.utils import timezone
 from notifications.signals import notify
 from reportlab.platypus import SimpleDocTemplate, Table, Image, Spacer, TableStyle, PageBreak, Paragraph
@@ -96,7 +96,6 @@ def toolboxadd(request):
                 tbm_items = ToolBoxItem.objects.filter(project_id=project.id)
                 for tbm_item in tbm_items:
                     ToolBoxLogItem.objects.create(
-                        activity=tbm_item.activity,
                         objective=tbm_item.objective,
                         description=tbm_item.description,
                         remark=tbm_item.remark,
@@ -134,7 +133,7 @@ def toolboxadd(request):
                 return JsonResponse({
                     "status": "Success",
                     "messages": "ToolBox information updated!",
-                    "tbmid": toolbox.id,
+                    "tbmid": tbm.id,
                     "method": "add"
                 })
 
@@ -213,7 +212,9 @@ class ToolBoxDetailView(DetailView):
         project = Project.objects.get(proj_id__iexact=tbm.project_no)
         context['toolbox_pk'] = content_pk
         context['project'] = project
-        context['supervisors'] = User.objects.filter(role="Supervisors")
+        # context['user_roles']=Role.objects.all()
+        # context['supervisors'] = User.objects.filter(role="Supervisors")
+        context['supervisors'] = User.objects.exclude(role="Worker")
         context['toolboxitems'] = ToolBoxLogItem.objects.filter(project_id=project.id, toolbox_id=content_pk)
         quotation = Quotation.objects.get(qtt_id__iexact=project.proj_id.replace('CPJ','').strip())
         projectitemactivitys = Scope.objects.filter(quotation_id=quotation.id)

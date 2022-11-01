@@ -20,13 +20,27 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
+                <div class="mt-2 col-md-7 col-lg-7 col-xl-4 col-sm-7 pb-1" style="margin-left:3em">
+                    <div class="row">
+                        <div class="mt-1 col-md-2 ">
+                            <button type="button" id="btn_read" class="btn btn-primary new-button" style="height: 38px;white-space: nowrap;" > Read </button>
+                        </div>
+                        <div class="mt-1 col-md-2">
+                            <button type="button" id="btn_unread" class="btn btn-warning new-button" style="height: 38px;white-space: nowrap;" > Unread</button>
+                        </div>
+                        <div class="mt-1 col-md-2">
+                            <button type="button" id="btn_remove" class="btn btn-danger new-button"  style="height: 38px;white-space: nowrap;" > Remove</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card-body">
                     <ul class="message-list">
                         {% for noti in notifications %}
                         <li class="unread">
                             <div class="col-mail col-mail-1">
                                 <div class="checkbox-wrapper-mail">
-                                    <input type="checkbox" id="{{noti.id}}">
+                                    <input type="checkbox" id="{{noti.id}}" class="notification" onclick="updateCheckedList('{{noti.id}}')">
                                     <label for="{{noti.id}}" class="toggle"></label>
                                 </div>
                                 <a href="#" class="title">{{noti.actor}}</a>
@@ -52,10 +66,100 @@
                 
             </div>
         </div>
-        
-        
     </div>
 </div>
-{% endblock%}
+
+
+<!-- Delete tools modal content -->
+<div id="notideleteModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="notidelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="notidelModalLabel">Delete Notification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-hidden="true"></button>
+            </div>
+            <div class="modal-body">
+                <h5>Are you sure you want to delete selected notifications?</h5>
+<!--                <input type="hidden" id="notidel_id" value="-1">-->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary waves-effect btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button id="notidel_confirm" type="button" class="btn btn-primary waves-effect btn-sm waves-light">OK</button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal-dialog -->
+</div>
+{% endblock %}
 {% block scripts %}
-{% endblock%}
+<script>
+    var noti_ids=[];
+
+    function updateCheckedList(id) {
+        if($('#'+id)[0].checked){
+            noti_ids.push(id)
+        }else{
+            noti_ids.pop(id)
+        }
+        console.log(noti_ids)
+    }
+
+    $("#btn_read").on('click', function(e){
+        for(let i=0;i<noti_ids.length;i++){
+            $.ajax({
+                headers: { "X-CSRFToken": '{{csrf_token}}' },
+                url: '{% url "ajax_read_notify" %}',
+                data: {
+                    notifyid: noti_ids[i],
+                },
+                type: 'POST',
+                success: function (data) {
+                    if(data.status=="ok"){
+                        location.reload();
+                    }
+                }
+            });
+        }
+    });
+    $("#btn_unread").on('click', function(e){
+        for(let i=0;i<noti_ids.length;i++){
+            $.ajax({
+                headers: { "X-CSRFToken": '{{csrf_token}}' },
+                url: '{% url "ajax_unread_notify" %}',
+                data: {
+                    notifyid: noti_ids[i],
+                },
+                type: 'POST',
+                success: function (data) {
+                    if(data.status=="ok"){
+                        location.reload();
+                    }
+                }
+            });
+        }
+    });
+    $("#btn_remove").on('click', function(e){
+        $("#notideleteModal").modal('show');
+    });
+    $("#notidel_confirm").on('click', function(event){
+        for(let i=0;i<noti_ids.length;i++){
+            $.ajax({
+                headers: { "X-CSRFToken": '{{csrf_token}}' },
+                url: '{% url "ajax_remove_notify" %}',
+                data: {
+                    notifyid: noti_ids[i],
+                },
+                type: 'POST',
+                success: function (data) {
+                    if(data.status=="ok"){
+                        location.reload();
+                    }
+                }
+            });
+        }
+        $('#notideleteModal').modal('hide');
+    });
+</script>
+
+{% endblock %}

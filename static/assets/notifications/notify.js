@@ -78,4 +78,11 @@ function fetch_api_data() {
     }
 }
 
+function reminder(){
+    console.log("----this is reminder----")
+
+    var r = new XMLHttpRequest();
+    r.open("GET", notify_api_url+'?max='+notify_fetch_count, true);
+    r.send();
+}
 setTimeout(fetch_api_data, 1000);

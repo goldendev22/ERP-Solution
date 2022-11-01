@@ -424,7 +424,7 @@
                                                         <td class="align-middle">{{projectitem.qty|default_if_none:""}}</td>
                                                         <td class="align-middle">
                                                             {% if projectitem.allocation_perc %}
-                                                                {{projectitem.allocation_perc|default_if_none:""}} %
+                                                                {{projectitem.allocation_perc|floatformat:2|default_if_none:""}} %
                                                             {% endif %}
                                                         </td>
                                                         <td class="align-middle">
@@ -447,7 +447,7 @@
                                                             <td class="align-middle">{{child.qty|default_if_none:""}}</td>
                                                             <td class="align-middle">
                                                                 {% if child.allocation_perc %}
-                                                                    {{child.allocation_perc|default_if_none:""}} %
+                                                                    {{child.allocation_perc|floatformat:2|default_if_none:""}} %
                                                                 {% endif %}
                                                             </td>
                                                             <td class="align-middle">
@@ -494,7 +494,7 @@
                                                 <td class="align-middle">{{projectitem.description|default_if_none:""}}</td>
                                                 <td class="align-middle">{{projectitem.uom|default_if_none:""}}</td>
                                                 <td class="align-middle">{{projectitem.qty|default_if_none:""}}</td>
-                                                <td class="align-middle">{{projectitem.allocation_perc|default_if_none:0}}</td>
+                                                <td class="align-middle">{{projectitem.allocation_perc|floatformat:2|default_if_none:0}}</td>
                                                 <td class="align-middle">{{projectitem.cumulativeqty|default_if_none:""}}</td>
                                                 <td class="align-middle">{{projectitem.cumulativeperc|floatformat:2|default_if_none:0}} %</td>
                                             </tr>
@@ -510,7 +510,7 @@
                                                 <td class="align-middle">{{child.qty|default_if_none:""}}</td>
                                                 <td class="align-middle">
                                                     {% if child.allocation_perc %}
-                                                        {{child.allocation_perc|default_if_none:""}}
+                                                        {{child.allocation_perc|floatformat:2|default_if_none:""}}
                                                     {% endif %}
                                                 </td>
                                                 <td class="align-middle">{{child.cumulativeqty|default_if_none:""}}</td>
@@ -520,6 +520,7 @@
                                         </tbody>
                                         {% endif %}
                                     {% endfor %}
+
                                     {% if projectitems %}
                                     <tbody>
                                         <tr>
@@ -532,7 +533,6 @@
                                             <td class="align-middle">{{subtotal|floatformat:2}} %</td>     
                                         </tr>
                                     </tbody>
-                                        
                                     {% endif %}
                                 </table>
                             </div>
@@ -596,12 +596,12 @@
                                     <thead>
                                         <tr>
                                             <th>SN</th>
-                                            <th>Description</th>
+                                            <th>Item Description</th>
                                             <th>UOM</th>
                                             <th>Ordered Qty</th>
                                             <th>Brand</th>
-                                            <th>Deliveryed Qty</th>
-                                            <th>Delivery PO NO</th>
+                                            <th>Delivered Qty</th>
+                                            <th>PO NO</th>
                                             <th>Date</th>
                                             <th>Remark</th>
                                             <th>Action</th>
@@ -1178,7 +1178,7 @@
                     </div>
                     
                     <div class="mb-3 mt-3 row">
-                        <label for="bdescription" class="col-md-4 col-form-label">Description:</label>
+                        <label for="bdescription" class="col-md-4 col-form-label">Item Description:</label>
                         <div class="col-md-8">
                             <textarea type="text" rows="3" class="form-control" id="bdescription" name="bdescription" required></textarea>
                         </div>
@@ -1207,13 +1207,13 @@
                         </div>
                     </div>
                     <div class="mb-3 row">
-                        <label for="bdelivery_qty" class="col-md-4 col-form-label">Delivery Qty:</label>
+                        <label for="bdelivery_qty" class="col-md-4 col-form-label">Delivered Qty:</label>
                         <div class="col-md-8">
                             <input class="form-control" type="number" onkeypress="return (event.charCode == 8 || event.charCode == 0 || event.charCode == 13) ? null : event.charCode >= 48 && event.charCode <= 57" id="bdelivery_qty" name="bdelivery_qty" readonly>
                         </div>
                     </div>
                     <div class="mb-3 row">
-                        <label for="bdelivered_po_no" class="col-md-4 col-form-label">Delivery PO No:</label>
+                        <label for="bdelivered_po_no" class="col-md-4 col-form-label">PO NO:</label>
                         <div class="col-md-8">
                             <input class="form-control" type="text" id="bdelivered_po_no" name="bdelivered_po_no">
                         </div>
@@ -1562,7 +1562,7 @@
                     <div class="mb-3 row">
                         <label for="i_allocation" class="col-md-4 col-form-label">Allocation(%):</label>
                         <div class="col-md-8">
-                            <input class="form-control" type="number"  id="i_allocation" onkeypress="return (event.charCode == 8 || event.charCode == 0 || event.charCode == 13) ? null : event.charCode >= 48 && event.charCode <= 57" autocomplete="off" required>
+                            <input class="form-control" type="number"  id="i_allocation" onkeypress="return (event.charCode == 8 || event.charCode == 0 || event.charCode == 13) ? null : event.charCode >= 48 && event.charCode <= 57" autocomplete="off" disabled="true" required>
                         </div>
                     </div>
                 </form>
@@ -1924,6 +1924,7 @@
     $("#summaryupdate").on('click', function(e){
         $("#SummaryDetailForm input").prop("disabled", false);
         $("#SummaryDetailForm textarea").prop("disabled", false);
+        $("#note").prop("disabled", true);
         
         $('select').prop('disabled', false);
         $("#SummaryDetailForm #company_name").prop("disabled", true);
