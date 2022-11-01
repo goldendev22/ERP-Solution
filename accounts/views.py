@@ -795,6 +795,7 @@ def materiallogadd(request):
         project_name = request.POST.get('project_name')
         emp_no = request.POST.get('emp_no')
         material_code = request.POST.get('material_code')
+        product_desc = request.POST.get('product_desc')
         material_out = request.POST.get('material_out')
         comment = request.POST.get('comment')
         date_time = request.POST.get('date_time')
@@ -805,6 +806,7 @@ def materiallogadd(request):
                     project_name=project_name,
                     emp_no=emp_no,
                     material_code=material_code,
+                    product_desc=product_desc,
                     material_out=material_out,
                     comment=comment,
                     date_time=date_time
@@ -828,6 +830,7 @@ def materiallogadd(request):
                 materiallog.project_name = project_name
                 materiallog.emp_no = emp_no
                 materiallog.material_code = material_code
+                materiallog.product_desc = product_desc
                 materiallog.material_out = material_out
                 materiallog.comment = comment
                 materiallog.date_time = date_time

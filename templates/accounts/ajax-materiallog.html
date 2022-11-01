@@ -5,6 +5,7 @@
             <tr>
                 <th>Emp No</th>
                 <th>Material Code</th>
+                <th>Product Description</th>
                 <th>Project Name</th>
                 <th>Material Out</th>
                 <th>Comment</th>
@@ -17,6 +18,7 @@
             <tr>
                 <td class="align-middle">{{materiallog.emp_no|default_if_none:""}}</td>
                 <td class="align-middle">{{materiallog.material_code|default_if_none:""}}</td>
+                <td class="align-middle">{{materiallog.product_desc|default_if_none:""}}</td>
                 <td class="align-middle">{{materiallog.project_name|default_if_none:""}}</td>
                 <td class="align-middle">{{materiallog.material_out|default_if_none:""}}</td>
                 

@@ -98,6 +98,7 @@ class WorkLog(models.Model):
 class MaterialLog(models.Model):
     emp_no = models.CharField(max_length=250, blank=True, null=True)
     material_code = models.CharField(max_length=250, blank=True, null=True)
+    product_desc = models.CharField(max_length=250, blank=True, null=True)
     project_name = models.CharField(max_length=250, blank=True, null=True)
     material_out = models.CharField(max_length=250, blank=True, null=True)
     date_time = models.DateTimeField(blank=True, null=True)
@@ -108,6 +109,21 @@ class MaterialLog(models.Model):
 
     class Meta:
         db_table = "tb_materialout"
+
+class PPELog(models.Model):
+    emp_no = models.CharField(max_length=250, blank=True, null=True)
+    ppe_code = models.CharField(max_length=250, blank=True, null=True)
+    ppe_desc = models.CharField(max_length=250, blank=True, null=True)
+    project_name = models.CharField(max_length=250, blank=True, null=True)
+    ppe_out = models.CharField(max_length=250, blank=True, null=True)
+    date_time = models.DateTimeField(blank=True, null=True)
+    comment = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.ppe_code
+
+    class Meta:
+        db_table = "tb_ppeout"
 
 
 class AssetLog(models.Model):

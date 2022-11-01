@@ -180,7 +180,7 @@
                             <select class="form-control select2" id="material_code" required>
                                 <option value="">Select the Material Code</option>
                                 {% for material in materials %}
-                                    <option value="{{material.material_code}}" data-qty="{{material.stock_qty}}" > {{material.material_code}} {{material.product_desc}}</option>
+                                    <option value="{{material.material_code}}" data-qty="{{material.stock_qty}}" data-desc="{{material.product_desc}}" > {{material.material_code}} {{material.product_desc}}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -423,6 +423,7 @@
                     project_name: $("#project_name").val(),
                     emp_no: $("#emp_no").val(),
                     material_code: $("#material_code").val(),
+                    product_desc: $("#material_code").find('option:selected').data('desc'),
                     material_out: $("#material_out").val(),
                     comment: $("#comment").val(),
                     date_time: formatDateTime($("#date_time").val()),
